@@ -1,0 +1,12 @@
+# Default configurations
+model:
+  weights: ???
+  input_size: (17, 17)
+  output_size: (272, 272)
+data:
+  train: ???
+  test: ???
+solver:
+  batch_size: 8
+  n_epochs: 50
+  base_lr: (1e-2, 1e-5)

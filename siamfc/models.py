@@ -17,6 +17,14 @@ class EmbeddingNet(nn.Module):
         return z
 
 
+class AlexNet(nn.Module):
+    pass
+
+
+class ContrastiveRandomWalkNet(nn.Module):
+    pass
+
+
 def _init_weights(m):
     if isinstance(m, nn.Conv2d):
         nn.init.xavier_uniform_(m.weight)
@@ -27,3 +35,6 @@ def _init_weights(m):
     elif isinstance(m, nn.Linear):
         nn.init.kaiming_uniform_(m.weight)
         nn.init.zeros_(m.weight)
+
+def load_pretrained():
+    pass
