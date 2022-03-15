@@ -81,4 +81,9 @@ dependencies:
   - xz=5.2.5=haf1e3a3_1
   - zlib=1.2.11=h9173be1_1013
   - zstd=1.5.2=h582d3a0_0
+  - pip:
+    - antlr4-python3-runtime==4.8
+    - hydra-core==1.1.1
+    - omegaconf==2.1.1
+    - pyyaml==6.0
 prefix: /Users/shion/opt/anaconda3/envs/siamfc

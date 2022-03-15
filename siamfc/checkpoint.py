@@ -1,5 +1,4 @@
-# Taken from University of Michigan, Ann Arbor EECS 545 Fall 2021
-import itertools
+# Adapted from University of Michigan, Ann Arbor EECS 545 Fall 2021
 import os
 import torch
 

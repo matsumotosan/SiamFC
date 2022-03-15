@@ -11,6 +11,8 @@ def threshold(score_map, labels, threshold):
 def mean_iou(score_map, labels):
     """Calculates mean IoU.
     
+    https://www.kaggle.com/iezepov/fast-iou-scoring-metric-in-pytorch-and-numpy
+    
     Parameters
     ----------
     score_map : array of size (B, H, W)

@@ -6,6 +6,7 @@ import torch.functional as F
 class EmbeddingNet(nn.Module):
     def __init__(self, model) -> None:
         super().__init__()
+        
         self.model = model
         self.init_weights()
         
@@ -15,7 +16,6 @@ class EmbeddingNet(nn.Module):
     def forward(self, x):
         z = self.model(x)
         return z
-
 
 class AlexNet(nn.Module):
     pass
@@ -35,6 +35,9 @@ def _init_weights(m):
     elif isinstance(m, nn.Linear):
         nn.init.kaiming_uniform_(m.weight)
         nn.init.zeros_(m.weight)
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def load_pretrained():
     pass
