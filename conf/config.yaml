@@ -8,5 +8,5 @@ data:
   test: ???
 solver:
   batch_size: 8
-  n_epochs: 50
+  max_epochs: 50
   base_lr: (1e-2, 1e-5)
