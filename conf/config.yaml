@@ -1,12 +1,16 @@
 # Default configurations
 model:
+  architecture: AlexNet
   weights: ???
   input_size: (17, 17)
   output_size: (272, 272)
 data:
+  dataset: ImageNet
   train: ???
   test: ???
-solver:
+  target_size: (127, 127)
+  search_size: (255, 255)
+hparams:
   batch_size: 8
   max_epochs: 50
-  base_lr: (1e-2, 1e-5)
+  lr: (1e-2, 1e-5)

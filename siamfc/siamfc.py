@@ -9,7 +9,7 @@ class SiameseNet(LightningModule):
         super().__init__()
         self.embedding_net = embedding_net
     
-    def init_weights(self):
+    def init_weights(self) -> None:
         self.embedding_net.init_weights()
     
     def forward(self, z, x):
@@ -27,6 +27,5 @@ class SiameseNet(LightningModule):
         opt = torch.optim.Adam(self.embedding_net.parameters(), lr=lr)
         return opt
 
-    @staticmethod
     def _xcorr(z, x):
         return None
