@@ -1,7 +1,7 @@
 import hydra
 import torch
-from pytorch_lightning import Trainer
-from siamfc import SiameseNet
+import pytorch_lightning as pl
+from siamfc.siamfc import SiamFCNet
 from siamfc.models import AlexNet, ContrastiveRandomWalkNet
 from siamfc.data import ImageNetDataModule
 
@@ -21,15 +21,15 @@ def main(cfg):
         return ValueError("Invalid embedding network architecture specified.")
     
     # Initialize SiamFC network
-    model = SiameseNet(embedding_net)
+    model = SiamFCNet(embedding_net)
     
     # Initialize data module
-    dm = ImageNetDataModule()
+    dm = ImageNetDataModule(cfg.data.dir)
     dm.prepare_data()
     dm.setup(stage="fit")
     
     # Initialize a trainer
-    trainer = Trainer(
+    trainer = pl.Trainer(
         max_epochs=cfg.hparams.max_epochs,
         progress_bar_refresh_rate=20
     )

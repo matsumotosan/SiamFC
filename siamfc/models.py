@@ -29,29 +29,29 @@ class AlexNet(nn.Module):
         super(AlexNet, self).__init__()
         self.model = nn.Sequential(
             # Layer 1
-            nn.Conv2d(3, 96, 11, 2),
+            nn.Conv2d(3, 96, 11, 2, groups=1),
             nn.BatchNorm2d(96),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(3, 2),
             
             # Layer 2
-            nn.Conv2d(96, 256, 5, 1),
+            nn.Conv2d(96, 256, 5, 1, groups=2),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(3, 2),
             
             # Layer 3
-            nn.Conv2d(256, 384, 3, 1),
+            nn.Conv2d(256, 384, 3, 1, groups=1),
             nn.BatchNorm2d(384),
             nn.ReLU(inplace=True),
             
             # Layer 4
-            nn.Conv2d(192, 384, 3, 1),
+            nn.Conv2d(384, 384, 3, 1, groups=2),
             nn.BatchNorm2d(384),
             nn.ReLU(inplace=True),
             
             # Layer 5
-            nn.Conv2d(192, 256, 3, 1)
+            nn.Conv2d(192, 256, 3, 1, groups=2)
             )
     
     def forward(self, x):

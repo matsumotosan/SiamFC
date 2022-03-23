@@ -6,6 +6,7 @@ model:
   output_size: (272, 272)
 data:
   dataset: ImageNet
+  dir: ./data/ILSVRC
   train: ???
   test: ???
   target_size: (127, 127)
