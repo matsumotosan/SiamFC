@@ -1,6 +1,6 @@
 # Default configurations
 model:
-  architecture: AlexNet
+  architecture: alexnet
   weights: ???
   input_size: (17, 17)
   output_size: (272, 272)

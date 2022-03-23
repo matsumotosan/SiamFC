@@ -1,9 +1,7 @@
-from click import pass_obj
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 # from pl_bolts.datasets import DummyDataset
-
 
 
 class ImageNetDataModule(LightningDataModule):

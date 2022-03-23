@@ -13,9 +13,9 @@ AVAIL_GPUS = min(1, torch.cuda.device_count())
 def main(cfg):
     
     # Initialize embedding network
-    if cfg.model.architecture == "AlexNet":
+    if cfg.model.architecture == "alexnet":
         embedding_net = AlexNet()
-    elif cfg.model.architecture == "CRWNet":
+    elif cfg.model.architecture == "crwnet":
         embedding_net = ContrastiveRandomWalkNet()
     else:
         return ValueError("Invalid embedding network architecture specified.")
