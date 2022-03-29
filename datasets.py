@@ -15,11 +15,13 @@ class Pair(Dataset):
         self.seqs = seqs
         self.transforms = transforms
         self.pairs_per_seq = pairs_per_seq
-        self.indices = np.random.permutation(len(seqs))
+        indices = np.random.permutation(len(seqs))
+        self.indices = indices[indices != 331] # We need to avoid the 332th video sequence because it's corrupted
         self.return_mata = getattr(seqs,'return_meta',False)
     
-    def  __get__item(self,index):
+    def  __getitem__(self,index):
         index = self.indices[index%len(self.indices)]
+        print(index)
         img_files, anno, meta = self.seqs[index]
         frame_indices = list(range(len(img_files))) #This is the indices of video frames for a specific sequence
         rand_z, rand_x = np.sort(np.random.choice(frame_indices,2,replace=False))
@@ -30,7 +32,7 @@ class Pair(Dataset):
         box_z = anno[rand_z]
         box_x = anno[rand_x]
         item = (z,x,box_z,box_x)
-        item = self.transforms(item)
+        item = self.transforms(*item)
         return item
     
     def __len__(self):

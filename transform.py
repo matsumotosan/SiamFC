@@ -64,8 +64,20 @@ class CenterCrop(object):
                 cv2.BORDER_CONSTANT, value=avg_color)
             i += npad
             j += npad
-
-        return img[i:i + th, j:j + tw]
+        patch = img[i:i+th,j:j+tw]
+        #Make sure the size of patch is correct
+        offset = np.sum(np.abs(np.array(patch.shape[0:2])-np.array(self.size))) #There might be some small pdifference between the size of the patch and the ideal size, the offset shouldnt be too large
+        assert offset <= 4
+        patch = cv2.resize(patch,self.size)
+        '''
+        #Uncomment the following lines to check the exemplar image and the search region. 
+        #Notice that many training samples include padding regions, which may cause some implicit bias.
+        cv2.imshow('display',patch)
+        cv2.waitKey(0)
+        '''
+        #print(self.size,patch.shape[0:2])
+        assert patch.shape[0:2] == self.size
+        return patch
 
 #This class randomly crops a patch with a specific size from an image
 class RandomCrop(object):
