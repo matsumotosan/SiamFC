@@ -27,10 +27,10 @@ class SiamFCNet(LightningModule):
         loss = bce_loss(self(x), y)
         return loss
 
-    def configure_optimizer(self):
+    def configure_optimizers(self):
         """Returns optimizer for model."""
-        lr = self.hparams.lr
-        opt = torch.optim.Adam(self.embedding_net.parameters(), lr=lr)
+        opt = torch.optim.Adam(self.embedding_net.parameters(), 
+                               lr=self.hparams.lr)
         return opt
 
     def _xcorr(z, x):
@@ -38,10 +38,10 @@ class SiamFCNet(LightningModule):
         
         Parameters
         ----------
-        z : ndarray of shape ()
+        z : ndarray of shape (B, C, H, W)
             Target embedding
         
-        x : ndarray of shape ()
+        x : ndarray of shape (B, C, Hx, Wx)
             Search embedding
         
         Returns
@@ -49,5 +49,14 @@ class SiamFCNet(LightningModule):
         score_map : ndarray of shape ()
             Score map
         """
-        score_map = F.conv2d(x, z)
+        # Reshape search region embeddings
+        batch_size, channel_search, w_search, h_search = x.shape
+        x = torch.reshape(x, (batch_size * channel_search, w_search, h_search))
+        
+        # Group convolution (cross-correlation operation)
+        score_map = F.conv2d(x, z, groups=batch_size)
+        
+        # Reshape score map
+        score_map = torch.reshape(score_map)
+        
         return score_map

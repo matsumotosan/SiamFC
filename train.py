@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from siamfc.siamfc import SiamFCNet
 from siamfc.models import AlexNet, ContrastiveRandomWalkNet
 from siamfc.data import ImageNetDataModule
-
+ 
 
 AVAIL_GPUS = min(1, torch.cuda.device_count())
 
@@ -38,7 +38,7 @@ def main(cfg):
     trainer.fit(model, datamodule=dm)
     
     # Test model
-    trainer.test(datamodule=dm)
+    # trainer.test(datamodule=dm)
 
 
 if __name__ == "__main__":

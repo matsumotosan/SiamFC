@@ -1,8 +1,6 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
-# from pl_bolts.datasets import DummyDataset
-
 
 class ImageNetDataModule(pl.LightningDataModule):
     # TODO: change from MNIST to ImageNet
