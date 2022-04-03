@@ -113,10 +113,10 @@ class SiamFCNet(pl.LightningModule):
         
         Parameters
         ----------
-        z : ndarray of shape ()
+        z : ndarray of shape (B, C, H, W)
             Target embedding
         
-        x : ndarray of shape ()
+        x : ndarray of shape (B, C, Hx, Wx)
             Search embedding
         
         Returns
