@@ -3,20 +3,6 @@ import torch.nn as nn
 import torch.functional as F
 
 
-class EmbeddingNet(nn.Module):
-    def __init__(self, model) -> None:
-        super().__init__()
-        
-        self.model = model
-        self.init_weights()
-        
-    def init_weights(self):
-        pass
-    
-    def forward(self, x):
-        z = self.model(x)
-        return z
-
 class AlexNet(nn.Module):
     """AlexNet architecture as specified by Bertinetto et al. (2016).
     
@@ -51,30 +37,23 @@ class AlexNet(nn.Module):
             nn.ReLU(inplace=True),
             
             # Layer 5
-            nn.Conv2d(192, 256, 3, 1, groups=2)
+            nn.Conv2d(384, 256, 3, 1, groups=2)
             )
     
     def forward(self, x):
         return self.model(x)
 
+    def load_pretrained(self, file, freeze=False) -> None:
+        """Load pretrained network for encoder
+        
+        Parameters
+        ----------
+        file : str
+            File containing pretrained network parameters
+        """
+        self.model.load_state_dict(torch.load(file, map_location=torch.device('cpu')))
+        if freeze:
+            self.model.freeze()
 
 class ContrastiveRandomWalkNet(nn.Module):
-    pass
-
-
-def _init_weights(m):
-    if isinstance(m, nn.Conv2d):
-        nn.init.xavier_uniform_(m.weight)
-        nn.init.constant_(m.bias, 0.1)
-    elif isinstance(m, nn.BatchNorm2d):
-        nn.init.normal_(m.weight)
-        nn.init.zeros_(m.bias)
-    elif isinstance(m, nn.Linear):
-        nn.init.kaiming_uniform_(m.weight)
-        nn.init.zeros_(m.weight)
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-def load_pretrained():
     pass
