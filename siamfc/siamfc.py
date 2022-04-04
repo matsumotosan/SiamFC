@@ -108,27 +108,47 @@ class SiamFCNet(pl.LightningModule):
         loss = self.loss(responses, labels)
         return loss
 
-    def _xcorr(self, z, x):
-        """Calculates cross-correlation between target and search image embeddings.
+    def _xcorr(self, z, x, scale_factor=None, mode='bicubic'):
+        """Calculates cross-correlation between target and exemplar image embeddings.
         
         Parameters
         ----------
-        z : ndarray of shape (B, C, H, W)
-            Target embedding
+        z : ndarray of shape (N, C, Hz, Wz)
+            Target images embeddings
         
-        x : ndarray of shape (B, C, Hx, Wx)
-            Search embedding
+        x : ndarray of shape (N, C, Hx, Wx)
+            Exemplar images embeddings
+        
+        scale_factor: int, default=None
+            Upsampling scaling factor (same in all spatial dimensions)
+        
+        mode : str, default='bicubic'
+            Upsampling interpolation method
+            Choose from {'linear', 'bilinear', 'bicubic', 'trilinear', False}.
         
         Returns
         -------
-        score_map : ndarray of shape ()
+        score_map : ndarray of shape (N, 1, Hmap, Wmap)
             Score map
+            
+        References
+        ----------
+        https://pytorch.org/docs/stable/generated/torch.nn.functional.upsample.html#torch.nn.functional.upsample
         """
+        # Get tensor dimensions of target and exemplar embeddings
         nz = z.shape[0]
         nx, cx, hx, wx, = x.shape
+        assert nz == nx, "Minibatch sizes not equal."
+        
+        # Calculate cross-correlation
         x = x.view(-1, nz * cx, hx, wx)
         score_map = F.conv2d(x, z, groups=nz)
         score_map = score_map.view(nx, -1, score_map.shape[-2], score_map.shape[-1])
+        
+        # Upsample response map (N, C, H, W) -> (N, C, H * scale_factor, W * scale_factor)
+        if scale_factor is not None:
+            score_map = F.upsample(score_map, scale_factor=scale_factor, mode=mode)
+        
         return score_map
     
     def _create_labels(self, size):
