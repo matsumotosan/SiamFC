@@ -124,7 +124,11 @@ class SiamFCNet(pl.LightningModule):
         score_map : ndarray of shape ()
             Score map
         """
-        score_map = F.conv2d(x, z)
+        nz = z.shape[0]
+        nx, cx, hx, wx, = x.shape
+        x = x.view(-1, nz * cx, hx, wx)
+        score_map = F.conv2d(x, z, groups=nz)
+        score_map = score_map.view(nx, -1, score_map.shape[-2], score_map.shape[-1])
         return score_map
     
     def _create_labels(self, size):

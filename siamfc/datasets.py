@@ -44,6 +44,19 @@ class ImageNetDataModule(pl.LightningDataModule):
 
 class Pair(Dataset):
     def __init__(self, seqs, transforms=None, pairs_per_seq=1):
+        """Data class for generating target and exemplar images from sequence of video frames.
+        
+        Parameters
+        ----------
+        seqs : object
+            Object containing list of filenames for raw images and annotations
+            
+        transforms : torch.Transform
+            PyTorch transforms to be used for target and exemplar images
+            
+        pairs_per_seq : int, default=1
+            Number of target/exemplar pairs to be generated from each sequence of video frames
+        """
         super().__init__()
         self.seqs = seqs
         self.transforms = transforms
@@ -62,7 +75,7 @@ class Pair(Dataset):
         
         # Select frame indices (ensure within maximum separation of number of frames)
         rand_z, rand_x = np.sort(np.random.choice(frame_indices,2,replace=False))
-        while rand_x-rand_z > 100: 
+        while rand_x - rand_z > 100: 
             rand_z, rand_x = np.sort(np.random.choice(frame_indices,2,replace=False))# The two chosen frames should be at most T frames apart 
         
         # Read exemplar and target images
@@ -76,9 +89,10 @@ class Pair(Dataset):
         # Perform image transforms on exemplar and target images
         item = (z, x, box_z, box_x)
         if self.transforms:
-            item = self.transforms(*item)
+            z, x = self.transforms(*item)
+            # item = self.transforms(*item)
 
-        return item
+        return z, x
     
     def __len__(self):
         return len(self.indices) *  self.pairs_per_seq

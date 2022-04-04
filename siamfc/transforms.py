@@ -1,3 +1,5 @@
+"""Adapted from https://github.com/huanglianghua/siamfc-pytorch"""
+
 from ctypes.wintypes import SIZE
 import cv2
 import numpy as np
@@ -96,28 +98,28 @@ class ToTensor:
         return torch.from_numpy(img).float().permute((2,0,1))
 
 
-class SiamFCDataTransform:
-    """Transforms for SiamFC exemplar and instance images."""
-    def __init__(self, exemplar_sz: int, instance_sz: int, context: float) -> None:
-        self.exemplar_sz = exemplar_sz
-        self.instance_sz = instance_sz
-        self.context = context
+# class SiamFCDataTransform:
+#     """Transforms for SiamFC exemplar and instance images."""
+#     def __init__(self, exemplar_sz: int, instance_sz: int, context: float) -> None:
+#         self.exemplar_sz = exemplar_sz
+#         self.instance_sz = instance_sz
+#         self.context = context
         
-        self.transform_instance = transforms.Compose([
-            transforms.Resize(),
-            transforms.CenterCrop(),
-            transforms.ToTensor()
-        ])
-        self.transform_instance = transforms.Compose([
-            transforms.Resize(),
-            transforms.CenterCrop(),
-            transforms.ToTensor()
-        ])
+#         self.transform_instance = transforms.Compose([
+#             transforms.Resize(),
+#             transforms.CenterCrop(),
+#             transforms.ToTensor()
+#         ])
+#         self.transform_instance = transforms.Compose([
+#             transforms.Resize(),
+#             transforms.CenterCrop(),
+#             transforms.ToTensor()
+#         ])
     
-    def __call__(self, z, x):
-        z = self.transform_instance(z)
-        x = self.transform_exemplar(x)
-        return z, x
+#     def __call__(self, z, x):
+#         z = self.transform_instance(z)
+#         x = self.transform_exemplar(x)
+#         return z, x
 
 
 class SiamFCTransforms:
