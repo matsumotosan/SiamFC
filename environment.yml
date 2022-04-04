@@ -1,10 +1,11 @@
 name: siamfc
 channels:
-  - vmtk
   - conda-forge
   - defaults
 dependencies:
   - torchvision
   - pytorch-lightning
   - opencv
-prefix: /Users/shion/opt/anaconda3/envs/siamfc
+  - hydra-core
+  - matplotlib
+  - numpy

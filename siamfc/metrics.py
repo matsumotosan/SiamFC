@@ -15,13 +15,13 @@ def mean_iou(score_map, labels):
     
     Parameters
     ----------
-    score_map : array of size (B, H, W)
+    score_map : array of size (N, H, W)
     
-    labels : array of size (B, H, W)
+    labels : array of size (N, H, W)
     
     Returns
     -------
-    mean_iou : array of size (B,)
+    mean_iou : array of size (N,)
     """
     intersection = (score_map & labels).sum((1, 2))
     union = (score_map | labels).sum((1, 2))

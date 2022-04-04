@@ -43,44 +43,47 @@ class ImageNetDataModule(pl.LightningDataModule):
 
 
 class Pair(Dataset):
-    def __init__(self, seqs, transforms=None, pairs_per_seq=1):
-        """Data class for generating target and exemplar images from sequence of video frames.
+    def __init__(self, seqs, transforms=None, max_frames_sep=100, pairs_per_seq=1):
+        """Data class for generating exemplar and target images from sequences of video frames.
         
         Parameters
         ----------
         seqs : object
             Object containing list of filenames for raw images and annotations
             
-        transforms : torch.Transform
-            PyTorch transforms to be used for target and exemplar images
-            
+        transforms : torch.Transform, default=None
+            PyTorch transforms to be used for exemplar and target images
+        
+        max_frames_sep : int, default=100
+            Maximum number of frames between exemplar and target images
+        
         pairs_per_seq : int, default=1
             Number of target/exemplar pairs to be generated from each sequence of video frames
         """
         super().__init__()
         self.seqs = seqs
         self.transforms = transforms
+        self.max_frames_sep = max_frames_sep
         self.pairs_per_seq = pairs_per_seq
         indices = np.random.permutation(len(seqs))
         self.indices = indices[indices != 331] # We need to avoid the 332th video sequence because it's corrupted
         self.return_meta = getattr(seqs, 'return_meta', False)
     
     def  __getitem__(self, index):
-        index = self.indices[index % len(self.indices)]
-
         # Get image filenames and annotations for video
+        index = self.indices[index % len(self.indices)]
         img_files, anno  = self.seqs[index]
         # img_files, anno, _meta  = self.seqs[index]
         frame_indices = list(range(len(img_files)))
         
         # Select frame indices (ensure within maximum separation of number of frames)
-        rand_z, rand_x = np.sort(np.random.choice(frame_indices,2,replace=False))
-        while rand_x - rand_z > 100: 
-            rand_z, rand_x = np.sort(np.random.choice(frame_indices,2,replace=False))# The two chosen frames should be at most T frames apart 
+        rand_z, rand_x = np.sort(np.random.choice(frame_indices, 2, replace=False))
+        while rand_x - rand_z > self.max_frames_sep: 
+            rand_z, rand_x = np.sort(np.random.choice(frame_indices, 2, replace=False))# The two chosen frames should be at most T frames apart 
         
         # Read exemplar and target images
-        z = cv2.imread(img_files[rand_z],cv2.IMREAD_COLOR) #May need to be converted to RGB color space
-        x = cv2.imread(img_files[rand_x],cv2.IMREAD_COLOR) #May need to be converted to RGB color space
+        z = cv2.imread(img_files[rand_z], cv2.IMREAD_COLOR) #May need to be converted to RGB color space
+        x = cv2.imread(img_files[rand_x], cv2.IMREAD_COLOR) #May need to be converted to RGB color space
         
         # Get annotations for exemplar and target images
         box_z = anno[rand_z]
@@ -90,7 +93,6 @@ class Pair(Dataset):
         item = (z, x, box_z, box_x)
         if self.transforms:
             z, x = self.transforms(*item)
-            # item = self.transforms(*item)
 
         return z, x
     

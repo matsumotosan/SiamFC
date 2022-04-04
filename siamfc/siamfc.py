@@ -39,19 +39,19 @@ class SiamFCNet(pl.LightningModule):
         self.r_neg = 0
 
     def forward(self, z, x):
-        """Calculate response map for pair of exmplar and search images.
+        """Calculate response map for pair of exemplar and search images.
         
         Parameters
         ----------
-        z : array of shape ()
+        z : array of shape (N, 3, Wz, Hz)
             Exemplar image
             
-        x : array of shape ()
-            Search image
+        x : array of shape (N, 3, Wx, Hx)
+            Target image
             
         Returns
         -------
-        response_map : array of shape ()
+        response_map : array of shape (N, 1, Wr, Hr)
             Cross-correlation response map of embedded images
         """
         target_embedded = self.encoder(z)
