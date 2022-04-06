@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 import numpy as np
+from .utils import create_labels, xcorr
 
 
 class SiamFCNet(pl.LightningModule):
@@ -40,7 +41,7 @@ class SiamFCNet(pl.LightningModule):
         self._init_weights()
         
         self.output_scale = output_scale
-        self.total_stride = 8
+        self.output_stride = self.encoder.output_stride
         self.r_pos = 16
         self.r_neg = 0
 
@@ -100,95 +101,25 @@ class SiamFCNet(pl.LightningModule):
 
     def _shared_step(self, batch, batch_idx):
         """Returns loss for pass through model with provided batch."""
-        (z, x) = batch
-        
         # Encode exemplar and search images
+        (z, x) = batch
         hz = self.encoder(z)
         hx = self.encoder(x)
         
-        #print(hz.shape, hx.shape)
-        
         # Calculate response map and loss
-        responses = self._xcorr(hz, hx) * self.output_scale
-        labels = self._create_labels(responses.size())
-        loss = self.loss(responses, labels)
+        responses = xcorr(hz, hx) * self.output_scale
+        
+        # Generate ground truth response map
+        if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
+            labels = create_labels(
+                responses.size(),
+                self.output_stride,
+                self.r_pos,
+                self.r_neg
+            )
+            self.labels = torch.from_numpy(labels).to(self.device).float()
+        
+        # Calculate loss
+        loss = self.loss(responses, self.labels)
+        
         return loss
-
-    def _xcorr(self, z, x, scale_factor=None, mode='bicubic'):
-        """Calculates cross-correlation between exemplar exemplar and search image embeddings.
-        
-        Parameters
-        ----------
-        z : ndarray of shape (N, C, Hz, Wz)
-            Exemplar images embeddings
-        
-        x : ndarray of shape (N, C, Hx, Wx)
-            Search images embeddings
-        
-        scale_factor: int, default=None
-            Upsampling scaling factor (same in all spatial dimensions)
-            Bertinetto et al. set to 16 during tracking (17, 17) -> (272, 272)
-            Can be set to 'None' (implicitly equal to 1) during training
-        
-        mode : str, default='bicubic'
-            Upsampling interpolation method
-            Choose from {'linear', 'bilinear', 'bicubic', 'trilinear', False}.
-        
-        Returns
-        -------
-        score_map : ndarray of shape (N, 1, Hmap * scale_factor, Wmap * scale_factor)
-            Score map
-            
-        References
-        ----------
-        https://pytorch.org/docs/stable/generated/torch.nn.functional.upsample.html#torch.nn.functional.upsample
-        """
-        # Get tensor dimensions of exemplar and search embeddings
-        nz = z.shape[0]
-        nx, cx, hx, wx, = x.shape
-        assert nz == nx, "Minibatch sizes not equal."
-        
-        # Calculate cross-correlation
-        x = x.view(-1, nz * cx, hx, wx)
-        score_map = F.conv2d(x, z, groups=nz)
-        score_map = score_map.view(nx, -1, score_map.shape[-2], score_map.shape[-1])
-        
-        # Upsample response map (N, C, H, W) -> (N, C, H * scale_factor, W * scale_factor)
-        if scale_factor is not None:
-            score_map = F.upsample(score_map, scale_factor=scale_factor, mode=mode)
-        
-        return score_map
-    
-    def _create_labels(self, size):
-        # skip if same sized labels already created
-        if hasattr(self, 'labels') and self.labels.size() == size:
-            return self.labels
-
-        def logistic_labels(x, y, r_pos, r_neg):
-            dist = np.abs(x) + np.abs(y)  # block distance
-            labels = np.where(dist <= r_pos,
-                              np.ones_like(x),
-                              np.where(dist < r_neg,
-                                       np.ones_like(x) * 0.5,
-                                       np.zeros_like(x)))
-            return labels
-
-        # distances along x- and y-axis
-        n, c, h, w = size
-        x = np.arange(w) - (w - 1) / 2
-        y = np.arange(h) - (h - 1) / 2
-        x, y = np.meshgrid(x, y)
-
-        # create logistic labels
-        r_pos = self.r_pos / self.total_stride
-        r_neg = self.r_neg / self.total_stride
-        labels = logistic_labels(x, y, r_pos, r_neg)
-
-        # repeat to size
-        labels = labels.reshape((1, 1, h, w))
-        labels = np.tile(labels, (n, c, 1, 1))
-
-        # convert to tensors
-        self.labels = torch.from_numpy(labels).to(self.device).float()
-        
-        return self.labels

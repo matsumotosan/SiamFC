@@ -39,6 +39,7 @@ class AlexNet(nn.Module):
             # Layer 5
             nn.Conv2d(384, 256, 3, 1, groups=2)
         )
+        self.output_stride = 8
     
     def forward(self, x):
         return self.model(x)
