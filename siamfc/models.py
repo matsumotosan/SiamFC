@@ -4,7 +4,7 @@ import torch.functional as F
 
 
 class AlexNet(nn.Module):
-    """AlexNet architecture as specified by Bertinetto et al. (2016).
+    """AlexNet encoder architecture as specified by Bertinetto et al. (2016).
     
     References
     ----------
@@ -38,7 +38,7 @@ class AlexNet(nn.Module):
             
             # Layer 5
             nn.Conv2d(384, 256, 3, 1, groups=2)
-            )
+        )
     
     def forward(self, x):
         return self.model(x)
@@ -54,6 +54,3 @@ class AlexNet(nn.Module):
         self.model.load_state_dict(torch.load(file, map_location=torch.device('cpu')))
         if freeze:
             self.model.freeze()
-
-class ContrastiveRandomWalkNet(nn.Module):
-    pass

@@ -7,12 +7,15 @@ import numpy as np
 
 class SiamFCNet(pl.LightningModule):
     def __init__(self, encoder, batch_size, lr, loss, output_scale=0.001, pretrained=False):
-        """Build SiamFC network
+        """Fully-convolutional Siamese architecture.
+        
+        Calculates score map of similarity between embeddings of exemplar images (z)
+        with respect to search images (x).
         
         Parameters
         ----------
         encoder : nn.Module
-            Encoding network to embed target and search images
+            Encoding network to embed exemplar and search images
         
         batch_size : int
             Batch size
@@ -25,6 +28,9 @@ class SiamFCNet(pl.LightningModule):
             
         output_scale : float, default=0.01
             Output scaling factor for response maps
+            
+        pretrained : bool, default=False
+            Option to use pretrained encoder network
         """
         super().__init__()
         self.encoder = encoder
@@ -39,7 +45,7 @@ class SiamFCNet(pl.LightningModule):
         self.r_neg = 0
 
     def forward(self, z, x):
-        """Calculate response map for pair of exemplar and search images.
+        """Calculate response map for pairs of exemplar and search images.
         
         Parameters
         ----------
@@ -47,16 +53,16 @@ class SiamFCNet(pl.LightningModule):
             Exemplar image
             
         x : array of shape (N, 3, Wx, Hx)
-            Target image
+            Search image
             
         Returns
         -------
         response_map : array of shape (N, 1, Wr, Hr)
             Cross-correlation response map of embedded images
         """
-        target_embedded = self.encoder(z)
+        exemplar_embedded = self.encoder(z)
         search_embedded = self.encoder(x)
-        return self._xcorr(target_embedded, search_embedded) * self.output_scale    
+        return self._xcorr(exemplar_embedded, search_embedded) * self.output_scale    
 
     def training_step(self, batch, batch_idx): #What does batch_nb mean?
         """Returns and logs loss for training step."""
@@ -96,31 +102,33 @@ class SiamFCNet(pl.LightningModule):
         """Returns loss for pass through model with provided batch."""
         (z, x) = batch
         
-        # Encode target and search images
+        # Encode exemplar and search images
         hz = self.encoder(z)
         hx = self.encoder(x)
         
         #print(hz.shape, hx.shape)
         
         # Calculate response map and loss
-        responses = self._xcorr(hz, hx)
+        responses = self._xcorr(hz, hx) * self.output_scale
         labels = self._create_labels(responses.size())
         loss = self.loss(responses, labels)
         return loss
 
     def _xcorr(self, z, x, scale_factor=None, mode='bicubic'):
-        """Calculates cross-correlation between target and exemplar image embeddings.
+        """Calculates cross-correlation between exemplar exemplar and search image embeddings.
         
         Parameters
         ----------
         z : ndarray of shape (N, C, Hz, Wz)
-            Target images embeddings
+            Exemplar images embeddings
         
         x : ndarray of shape (N, C, Hx, Wx)
-            Exemplar images embeddings
+            Search images embeddings
         
         scale_factor: int, default=None
             Upsampling scaling factor (same in all spatial dimensions)
+            Bertinetto et al. set to 16 during tracking (17, 17) -> (272, 272)
+            Can be set to 'None' (implicitly equal to 1) during training
         
         mode : str, default='bicubic'
             Upsampling interpolation method
@@ -128,14 +136,14 @@ class SiamFCNet(pl.LightningModule):
         
         Returns
         -------
-        score_map : ndarray of shape (N, 1, Hmap, Wmap)
+        score_map : ndarray of shape (N, 1, Hmap * scale_factor, Wmap * scale_factor)
             Score map
             
         References
         ----------
         https://pytorch.org/docs/stable/generated/torch.nn.functional.upsample.html#torch.nn.functional.upsample
         """
-        # Get tensor dimensions of target and exemplar embeddings
+        # Get tensor dimensions of exemplar and search embeddings
         nz = z.shape[0]
         nx, cx, hx, wx, = x.shape
         assert nz == nx, "Minibatch sizes not equal."

@@ -123,26 +123,27 @@ class ToTensor:
 
 
 class SiamFCTransforms:
-    """Transforms for SiamFC exemplar and instance images"""
+    """Transforms for SiamFC exemplar and search images.
+    """
     def __init__(self, exempler_sz: int = 127, instance_sz: int = 255, context: float = 0.5):
         self.exemplar_sz = exempler_sz
         self.instance_sz = instance_sz
         self.context = context
 
-        self.transform_z = Compose([
+        self.transform_z = transforms.Compose([
             RandomStretch(),
             CenterCrop(exempler_sz),
             ToTensor()
         ])
-        self.transform_x = Compose([
+        self.transform_x = transforms.Compose([
             RandomStretch(),
             CenterCrop(instance_sz),
             ToTensor()
         ])
     
-    def __call__(self,z,x,box_z,box_x):
-        z = self._crop(z,box_z,self.instance_sz)
-        x = self._crop(x,box_x,self.instance_sz)
+    def __call__(self, z, x, box_z, box_x):
+        z = self._crop(z, box_z, self.instance_sz)
+        x = self._crop(x, box_x, self.instance_sz)
         z = self.transform_z(z)
         x = self.transform_x(x)
         return z, x
