@@ -9,8 +9,10 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     Originally formulated as:
         y[u] = +1 if k * ||u - c || <= R, otherwise -1.
     
-    In implementation, we choose to create the labels as
-        y[u] = +1 if ||u - c || <= R / k, otherwise -1.
+    In implementation, we choose to create the labels as:
+        y[u] = +1 if ||u - c || <= (R / k), otherwise -1.
+    
+    where u=(x,y) is the position of element on the score map.
     
     Parameters
     ----------
@@ -41,32 +43,34 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     xy = np.stack((xx, yy), axis=0)
 
     # Calculate scaled distance threshold (R / k)
-    r_pos = r_pos / k
-    r_neg = r_neg / k
+    r_pos /= k
+    r_neg /= k
     
     # Calculate distance to center
     if metric == "l1":
         dist = np.linalg.norm(xy, ord=1, axis=0)
     elif metric == 'l2':
         dist = np.linalg.norm(xy, ord='fro', axis=0)
+    else:
+        return ValueError("Invalid distance metric.")
     
     # Determine labels based on distance
-    labels = np.where(
-        dist <= r_pos, 
-        np.ones_like(x), 
-        np.where(
-            dist < r_neg, 
-            np.ones_like(x) * 0.5,
-            np.zeros_like(x)
-        )
-    )
     # labels = np.where(
     #     dist <= r_pos, 
     #     np.ones_like(x), 
-    #     -np.ones_like(x)
+    #     np.where(
+    #         dist < r_neg, 
+    #         np.ones_like(x) * 0.5,
+    #         np.zeros_like(x)
+    #     )
     # )
+    labels = np.where(
+        dist <= r_pos, 
+        np.ones_like(x), 
+        -np.ones_like(x)
+    )
 
-    # Repeat labels by batch size
+    # Reshape to match size of score map
     labels = labels.reshape((1, 1, h, w))
     labels = np.tile(labels, (n, c, 1, 1))
     
