@@ -27,7 +27,7 @@ def bce_loss_balanced(scores, labels):
     pos_num = pos_mask.sum().float()
     neg_num = neg_mask.sum().float()
     
-    # Calclulate rescaling weight for each element (scale to sum to one)
+    # Calclulate rescaling weight for each element (scale to sum weights to one)
     weight = labels.new_zeros(labels.size())
     weight[pos_mask] = 1 / pos_num
     weight[neg_mask] = 1 / neg_num

@@ -9,7 +9,7 @@ from .utils import create_labels, xcorr
 class SiamFCNet(pl.LightningModule):
     def __init__(self, encoder, batch_size, lr, loss, output_scale=0.001, pretrained=False):
         """Fully-convolutional Siamese architecture.
-        
+         
         Calculates score map of similarity between embeddings of exemplar images (z)
         with respect to search images (x).
         
@@ -23,13 +23,13 @@ class SiamFCNet(pl.LightningModule):
         
         lr : float
             Learning rate
-            
+         
         loss : 
             Loss function
-            
+        
         output_scale : float, default=0.01
             Output scaling factor for response maps
-            
+        
         pretrained : bool, default=False
             Option to use pretrained encoder network
         """
@@ -44,7 +44,7 @@ class SiamFCNet(pl.LightningModule):
         self.output_stride = self.encoder.output_stride
         self.r_pos = 16
         self.r_neg = 0
-
+        
     def forward(self, z, x):
         """Calculate response map for pairs of exemplar and search images.
         
@@ -106,7 +106,7 @@ class SiamFCNet(pl.LightningModule):
         hz = self.encoder(z)
         hx = self.encoder(x)
         
-        # Calculate response map and loss
+        # Calculate response map
         responses = xcorr(hz, hx) * self.output_scale
         
         # Generate ground truth response map

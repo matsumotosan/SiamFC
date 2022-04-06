@@ -1,6 +1,7 @@
 import os
 import cv2
 import hydra
+import torch
 import pytorch_lightning as pl
 from got10k.datasets import *
 from torch.utils.data import DataLoader
