@@ -54,16 +54,7 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     else:
         return ValueError("Invalid distance metric.")
     
-    # Determine labels based on distance
-    # labels = np.where(
-    #     dist <= r_pos, 
-    #     np.ones_like(x), 
-    #     np.where(
-    #         dist < r_neg, 
-    #         np.ones_like(x) * 0.5,
-    #         np.zeros_like(x)
-    #     )
-    # )
+    # Enter labels (+1 if <= R, -1 otherwise)
     labels = np.where(
         dist <= r_pos, 
         np.ones_like(x), 

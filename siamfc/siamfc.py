@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-import numpy as np
 from .utils import create_labels, xcorr
 
 
@@ -106,10 +105,10 @@ class SiamFCNet(pl.LightningModule):
         hz = self.encoder(z)
         hx = self.encoder(x)
         
-        # Calculate response map
+        # Calculate cross-correlation response map
         responses = xcorr(hz, hx) * self.output_scale
         
-        # Generate ground truth response map
+        # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
             labels = create_labels(
                 responses.size(),
