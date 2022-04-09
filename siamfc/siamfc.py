@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from .utils import create_labels, xcorr
+from utils import create_labels, xcorr
 
 
 class SiamFCNet(pl.LightningModule):
@@ -40,10 +40,11 @@ class SiamFCNet(pl.LightningModule):
         self._init_weights()
         
         self.output_scale = output_scale
-        self.output_stride = self.encoder.output_stride
+        #self.output_stride = self.encoder.output_stride
         self.r_pos = 16
         self.r_neg = 0
         
+        self.total_stride = self.encoder.total_stride
     def forward(self, z, x):
         """Calculate response map for pairs of exemplar and search images.
         
@@ -106,13 +107,13 @@ class SiamFCNet(pl.LightningModule):
         hx = self.encoder(x)
         
         # Calculate cross-correlation response map
-        responses = xcorr(hz, hx) * self.output_scale
+        responses = self.xcorr(hz, hx) * self.output_scale
         
         # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
             labels = create_labels(
                 responses.size(),
-                self.output_stride,
+                self.total_stride,
                 self.r_pos,
                 self.r_neg
             )
@@ -122,3 +123,11 @@ class SiamFCNet(pl.LightningModule):
         loss = self.loss(responses, self.labels)
         
         return loss
+    
+    def _xcorr(self,hz,hx):
+        nz = hz.size(0)
+        nx, c, h, w = hx.size()
+        hx = hx.view(-1,nz*c,h,w)
+        out = F.conv2d(hx,hz,groups=nz)
+        out = out.view(nx,-1,out.size(-2),out.size(-1))
+        return out

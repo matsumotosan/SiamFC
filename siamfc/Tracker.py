@@ -1,11 +1,12 @@
 import os
 import cv2
 import time
+import glob
 import torch
 import numpy as np
 from got10k.trackers import Tracker
 from .utils import crop_and_resize, read_image, show_image
-
+from collections import namedtuple
 
 # Tracker configurations
 response_up = 16
@@ -17,7 +18,6 @@ scale_num = 5 #3
 exemplar_sz = 127
 instance_sz = 255
 context = 0.5
-window_influence = 0.176
 
 
 class SiamFCTracker(Tracker):
@@ -31,10 +31,44 @@ class SiamFCTracker(Tracker):
         self.siamese_net.eval()
         
         if net_path is not None:
-            self.siamese_net.load_state_dict(torch.load(net_path))
-            
+            self.siamese_net.encoder.load_state_dict(torch.load(net_path,map_location=self.device))
         self.siamese_net.to(self.device)
+        self.cfg = self.parse_args(**kwargs)
         
+    def parse_args(self, **kwargs):
+        # default parameters
+        cfg = {
+            # basic parameters
+            #'out_scale': 0.001,
+            'exemplar_sz': 127,
+            'instance_sz': 255,
+            'context': 0.5,
+            # inference parameters
+            'scale_num': 3, #5
+            'scale_step': 1.025, #1.0375,
+            'scale_lr': 0.35, #0.59,
+            'scale_penalty': 0.9745,
+            'window_influence': 0.176,
+            'response_sz': 17,
+            'response_up': 16,
+            #'total_stride': 8,
+            # train parameters
+            #'epoch_num': 50,
+            #'batch_size': 8,
+            #'num_workers': 32,
+            #initial_lr': 1e-2,
+            #'ultimate_lr': 1e-5,
+            #'weight_decay': 5e-4,
+            #'momentum': 0.9,
+            #'r_pos': 16,
+            #'r_neg': 0
+            }
+        
+        for key, val in kwargs.items():
+            if key in cfg:
+                cfg.update({key: val})
+        return namedtuple('Config', cfg.keys())(**cfg)
+    
     @torch.no_grad()
     def init(self, img, box):
         # convert box to 0-indexed and center based [y, x, h, w]
@@ -46,28 +80,28 @@ class SiamFCTracker(Tracker):
         self.center, self.target_sz = box[:2], box[2:]
         
         # create hanning window, which is used to regularize the response map 
-        self.upscale_sz = response_up*response_sz #This is the size of the response map after upsampling
+        self.upscale_sz = self.cfg.response_up*self.cfg.response_sz #This is the size of the response map after upsampling
         self.hann_window = np.outer(
             np.hanning(self.upscale_sz),
             np.hanning(self.upscale_sz))
         self.hann_window /= self.hann_window.sum()
         
         # search scale factors
-        self.scale_factors = scale_step ** np.linspace(
-            -(scale_num // 2),
-          scale_num // 2, scale_num)
+        self.scale_factors = self.cfg.scale_step ** np.linspace(
+            -(self.cfg.scale_num // 2),
+          self.cfg.scale_num // 2, self.cfg.scale_num)
         
         # exemplar and search sizes
-        margin = context * np.sum(self.target_sz)
+        margin = self.cfg.context * np.sum(self.target_sz)
         self.z_sz = np.sqrt(np.prod(self.target_sz + margin))
         self.x_sz = self.z_sz * \
-            instance_sz / exemplar_sz
+            self.cfg.instance_sz / self.cfg.exemplar_sz
         
         #get the exemplar image from the first frame
         self.avg_color = np.mean(img,axis=(0,1))
         z = crop_and_resize(
             img, self.center, self.z_sz,
-            out_size=self.cfg.exemplar_sz,
+            out_size = self.cfg.exemplar_sz,
             border_value=self.avg_color)
         
         #get the deep feature for the exemplar image
@@ -79,7 +113,7 @@ class SiamFCTracker(Tracker):
         # search images
         x = [crop_and_resize(
             img, self.center, self.x_sz * f,
-            out_size=instance_sz,
+            out_size=self.cfg.instance_sz,
             border_value=self.avg_color) for f in self.scale_factors]
         x = np.stack(x, axis=0)
         x = torch.from_numpy(x).to(
@@ -98,8 +132,8 @@ class SiamFCTracker(Tracker):
             u, (self.upscale_sz, self.upscale_sz),
             interpolation=cv2.INTER_CUBIC)
             for u in responses]) 
-        responses[:scale_num // 2] *= scale_penalty
-        responses[scale_num // 2 + 1:] *= scale_penalty
+        responses[:self.cfg.scale_num // 2] *= self.cfg.scale_penalty
+        responses[self.cfg.scale_num // 2 + 1:] *= self.cfg.scale_penalty
         
         #choose the response map with the largest peak value
         scale_id = np.argmax(np.amax(responses,axis=(1,2)))
@@ -109,21 +143,21 @@ class SiamFCTracker(Tracker):
         response -= response.min()
         response /= response.sum() + 1e-16
         #Apply hanning window to the response map
-        response = (1 - window_influence) * response + \
-            window_influence * self.hann_window
+        response = (1 - self.cfg.window_influence) * response + \
+            self.cfg.window_influence * self.hann_window
         loc = np.unravel_index(response.argmax(), response.shape)
 
         # locate target center
         disp_in_response = np.array(loc) - (self.upscale_sz - 1) / 2
         disp_in_instance = disp_in_response * \
-            self.siamese_net.total_stride / response_up
+            self.siamese_net.total_stride / self.cfg.response_up
         disp_in_image = disp_in_instance * self.x_sz * \
-            self.scale_factors[scale_id] / instance_sz
+            self.scale_factors[scale_id] / self.cfg.instance_sz
         self.center += disp_in_image
 
         # update target size
-        scale =  (1 - scale_lr) * 1.0 + \
-            scale_lr * self.scale_factors[scale_id]
+        scale =  (1 - self.cfg.scale_lr) * 1.0 + \
+            self.cfg.scale_lr * self.scale_factors[scale_id]
         self.target_sz *= scale
         self.z_sz *= scale
         self.x_sz *= scale
@@ -154,4 +188,4 @@ class SiamFCTracker(Tracker):
             if visualize:
                 show_image(img, boxes[f, :])
 
-        return boxes, times    
+        return boxes, times

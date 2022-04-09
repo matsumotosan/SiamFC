@@ -54,7 +54,8 @@ def main():
     # Get data (images and annotations)
     img_files = sorted(glob.glob(data_dir + '*.jpg'))
     anno = np.loadtxt(data_dir + 'groundtruth.txt')
-    
+   
+    # Run tracker 
     tracker.track(img_files, anno[0], visualize=True)
 
 

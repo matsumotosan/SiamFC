@@ -2,7 +2,7 @@ from siamfc.datasets import ImageNetDataModule, Pair
 from siamfc.losses import bce_loss_balanced
 from siamfc.models import AlexNet
 from siamfc.siamfc import SiamFCNet
-from siamfc.tracker import SiamFCTracker
+from siamfc.Tracker import SiamFCTracker
 from siamfc.transforms import (
     Compose, 
     RandomStretch, 
