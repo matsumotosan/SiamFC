@@ -5,7 +5,7 @@ import glob
 import torch
 import numpy as np
 from got10k.trackers import Tracker
-from .utils import crop_and_resize, read_image, show_image
+from siamfc.utils  import crop_and_resize, read_image, show_image
 from collections import namedtuple
 
 # Tracker configurations
@@ -21,8 +21,8 @@ context = 0.5
 
 
 class SiamFCTracker(Tracker):
-    def __init__(self, net_path=None, siamese_net=None):
-        super(SiamFCTracker,self).__init__('SiamFC', True)
+    def __init__(self, net_path=None, siamese_net=None, **kwargs):
+        super().__init__('SiamFC', True)
         assert siamese_net != None
         
         self.siamese_net = siamese_net

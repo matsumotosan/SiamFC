@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from utils import create_labels, xcorr
+from .utils import create_labels, xcorr
 
 
 class SiamFCNet(pl.LightningModule):
@@ -43,8 +43,8 @@ class SiamFCNet(pl.LightningModule):
         #self.output_stride = self.encoder.output_stride
         self.r_pos = 16
         self.r_neg = 0
-        
         self.total_stride = self.encoder.total_stride
+        
     def forward(self, z, x):
         """Calculate response map for pairs of exemplar and search images.
         
