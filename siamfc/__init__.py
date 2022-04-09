@@ -2,7 +2,7 @@ from siamfc.datasets import ImageNetDataModule, Pair
 from siamfc.losses import bce_loss_balanced
 from siamfc.models import AlexNet
 from siamfc.siamfc import SiamFCNet
-from siamfc.Tracker import SiamFCTracker
+from siamfc.tracker import SiamFCTracker
 from siamfc.transforms import (
     Compose, 
     RandomStretch, 
@@ -12,6 +12,7 @@ from siamfc.transforms import (
     ToTensor
 )
 from siamfc.utils import (
+    crop_and_resize,
     read_image, 
     show_image
 )
@@ -19,8 +20,9 @@ from siamfc.utils import (
 __all__ = [
     "AlexNet",
     "bce_loss_balanced",
-    "Compose",
     "CenterCrop",
+    "Compose",
+    "crop_and_resize",
     "ImageNetDataModule",
     "Pair",
     "read_image",

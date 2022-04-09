@@ -1,3 +1,4 @@
+"""Script to train SiamFC network."""
 import os
 import cv2
 import hydra

@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.functional as F
 
 
 class AlexNet(nn.Module):
@@ -13,45 +12,37 @@ class AlexNet(nn.Module):
     """
     def __init__(self) -> None:
         super(AlexNet, self).__init__()
-        self.model = nn.Sequential(
-            # Layer 1
+        self.conv1 = nn.Sequential(
             nn.Conv2d(3, 96, 11, 2, groups=1),
             nn.BatchNorm2d(96),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(3, 2),
-            
-            # Layer 2
+            nn.MaxPool2d(3, 2)
+        ) 
+        self.conv2 = nn.Sequential(
             nn.Conv2d(96, 256, 5, 1, groups=2),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(3, 2),
-            
-            # Layer 3
+            nn.MaxPool2d(3, 2), 
+        )
+        self.conv3 = nn.Sequential(
             nn.Conv2d(256, 384, 3, 1, groups=1),
             nn.BatchNorm2d(384),
             nn.ReLU(inplace=True),
-            
-            # Layer 4
+        )
+        self.conv4 = nn.Sequential(
             nn.Conv2d(384, 384, 3, 1, groups=2),
             nn.BatchNorm2d(384),
             nn.ReLU(inplace=True),
-            
-            # Layer 5
+        )
+        self.conv5 = nn.Sequential(
             nn.Conv2d(384, 256, 3, 1, groups=2)
         )
         self.output_stride = 8
     
     def forward(self, x):
-        return self.model(x)
-
-    def load_pretrained(self, file, freeze=False) -> None:
-        """Load pretrained network for encoder
-        
-        Parameters
-        ----------
-        file : str
-            File containing pretrained network parameters
-        """
-        self.model.load_state_dict(torch.load(file, map_location=torch.device('cpu')))
-        if freeze:
-            self.model.freeze()
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        return x

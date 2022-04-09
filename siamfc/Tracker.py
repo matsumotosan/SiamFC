@@ -1,19 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr  4 00:34:46 2022
-
-@author: xiangli
-"""
 import os
-from got10k.trackers import Tracker
-from models import *
-from siamfc import *
-import numpy as np
-from transforms import *
-from losses import *
 import cv2
+import time
+import torch
+import numpy as np
+from got10k.trackers import Tracker
+from .utils import crop_and_resize, read_image, show_image
 
+
+# Tracker configurations
 response_up = 16
 response_sz = 17
 scale_step = 1.025 #1.0375
@@ -27,19 +21,22 @@ window_influence = 0.176
 
 
 class SiamFCTracker(Tracker):
-    def __init__(self,net_path=None,siamese_net=None):
+    def __init__(self, net_path=None, siamese_net=None):
         super(SiamFCTracker,self).__init__('SiamFC', True)
         assert siamese_net != None
+        
         self.siamese_net = siamese_net
         self.cuda = torch.cuda.is_available()
         self.device = torch.device('cuda:0' if self.cuda else 'cpu')
         self.siamese_net.eval()
+        
         if net_path is not None:
             self.siamese_net.load_state_dict(torch.load(net_path))
+            
         self.siamese_net.to(self.device)
         
     @torch.no_grad()
-    def init(self,img,box):
+    def init(self, img, box):
         # convert box to 0-indexed and center based [y, x, h, w]
         # Notice that the box given by GOT-10k has format ltwh(left, top, width, height)
         box = np.array([
@@ -78,7 +75,7 @@ class SiamFCTracker(Tracker):
         self.kernel = self.siamese_net.encoder(z) #size: 1x1x17x17
     
     @torch.no_grad()
-    def update(self,img):
+    def update(self, img):
         # search images
         x = [crop_and_resize(
             img, self.center, self.x_sz * f,
@@ -139,7 +136,7 @@ class SiamFCTracker(Tracker):
 
         return box
     
-    def track(self,img_files,box,visualize = False):
+    def track(self, img_files, box, visualize=False):
         frame_num = len(img_files)
         boxes = np.zeros((frame_num,4))
         boxes[0] = box
@@ -157,26 +154,4 @@ class SiamFCTracker(Tracker):
             if visualize:
                 show_image(img, boxes[f, :])
 
-        return boxes, times
-    
-if __name__ == '__main__':
-    encoder = AlexNet()
-    batch_size = 8
-    epoch_num = 50
-    lr = 1e-2
-    siamese_net = SiamFCNet(
-        encoder=encoder,
-        batch_size=batch_size,
-        lr=lr,
-        loss=bce_loss_balanced
-    )
-    tracker = SiameseFcTracker(siamese_net = siamese_net)
-    
-    seq_dir = os.path.expanduser('/Users/xiangli/iCloud Drive (Archive)/Desktop/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001')
-    img_files = sorted(glob.glob(seq_dir + 'img/*.jpg'))
-    anno = np.loadtxt(seq_dir + 'groundtruth.txt')
-    
-    #net_path = 'pretrained/siamfc_alexnet_e50.pth'
-    tracker.track(img_files, anno[0], visualize=True)
-    
-    
+        return boxes, times    
