@@ -37,7 +37,7 @@ class SiamFCNet(pl.LightningModule):
         self.batch_size = batch_size
         self.lr = lr
         self.loss = loss
-        self._init_weights()
+        # self._init_weights()
         
         self.output_scale = output_scale
         #self.output_stride = self.encoder.output_stride
@@ -107,7 +107,7 @@ class SiamFCNet(pl.LightningModule):
         hx = self.encoder(x)
         
         # Calculate cross-correlation response map
-        responses = self.xcorr(hz, hx) * self.output_scale
+        responses = self._xcorr(hz, hx) * self.output_scale
         
         # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
@@ -124,10 +124,38 @@ class SiamFCNet(pl.LightningModule):
         
         return loss
     
-    def _xcorr(self,hz,hx):
-        nz = hz.size(0)
-        nx, c, h, w = hx.size()
-        hx = hx.view(-1,nz*c,h,w)
-        out = F.conv2d(hx,hz,groups=nz)
-        out = out.view(nx,-1,out.size(-2),out.size(-1))
+    def _xcorr(self, z, x):
+        """Calculates cross-correlation between exemplar exemplar and search image embeddings.
+    
+        Parameters
+        ----------
+        z : ndarray of shape (N, C, Hz, Wz)
+            Exemplar images embeddings
+        
+        x : ndarray of shape (N, C, Hx, Wx)
+            Search images embeddings
+        
+        scale_factor: int, default=None
+            Upsampling scaling factor (same in all spatial dimensions)
+            Bertinetto et al. set to 16 during tracking (17, 17) -> (272, 272)
+            Can be set to 'None' (implicitly equal to 1) during training
+        
+        mode : str, default='bicubic'
+            Upsampling interpolation method
+            Choose from {'linear', 'bilinear', 'bicubic', 'trilinear', False}.
+        
+        Returns
+        -------
+        score_map : ndarray of shape (N, 1, Hmap * scale_factor, Wmap * scale_factor)
+            Score map
+            
+        References
+        ----------
+        https://pytorch.org/docs/stable/generated/torch.nn.functional.upsample.html#torch.nn.functional.upsample
+        """
+        nz = z.size(0)
+        nx, c, h, w = x.size()
+        x = x.view(-1, nz * c, h, w)
+        out = F.conv2d(x, z, groups=nz)
+        out = out.view(nx, -1, out.size(-2), out.size(-1))
         return out

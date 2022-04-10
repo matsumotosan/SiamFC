@@ -1,10 +1,8 @@
-"""Script to run tracking using trained SiamFC network."""
-import os
+"""Run SiamFC tracker using pretrained encoder."""
 import glob
 import numpy as np
 import torch
 from siamfc import *
-from got10k.trackers import Tracker
 
 
 # Tracker settings
@@ -25,38 +23,39 @@ epoch_num = 50
 lr = 1e-2
 
 # Pre-trained encoder file
-pretrained_encoder_pth = 'pretrained/siamfc_alexnet_e50.pth'
+pretrained_encoder = 'pretrained/siamfc_alexnet_e50.pth'
 
 # Data directory
-data_dir = './data/GOT-10k/train/GOT-10k_Train_000001/'
+data_dir = './data/GOT-10k/train/GOT-10k_Train_000040/'
 device = torch.device('cpu')
 
 
 def main():
     # Load pre-trained encoder
     encoder = AlexNet()
-    # encoder.load_state_dict(torch.load(pretrained_encoder_pth, map_location=device))
+    encoder.load_pretrained(file=pretrained_encoder)
     
-    # Initialize SiamFC network
-    siamese_net = SiamFCNet(
+    # Initialize SiamFC network and set to .eval() mode
+    siamese_model = SiamFCNet(
         encoder=encoder,
         batch_size=batch_size,
         lr=lr,
         loss=bce_loss_balanced
     )
+    siamese_model.eval()
     
     # Initialize tracker
     tracker = SiamFCTracker(
-        siamese_net=siamese_net
+        siamese_net=siamese_model
     )
     
     # Get data (images and annotations)
     img_files = sorted(glob.glob(data_dir + '*.jpg'))
     anno = np.loadtxt(data_dir + 'groundtruth.txt', delimiter=',')
     
-    # Run tracker 
+    # Run tracker
     tracker.track(img_files, anno[0], visualize=True)
-
+    
 
 if __name__ == '__main__':
     main()
