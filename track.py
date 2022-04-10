@@ -28,7 +28,6 @@ encoder_arch = 'alexnet'
 pretrained_siamfc_alexnet = 'pretrained/siamfc_alexnet_e50.pth'
 pretrained_crw_resnet = 'submodules/videowalk/pretrained.pth'
 
-
 # Data directory
 data_dir = './data/GOT-10k/train/GOT-10k_Train_000040/'
 device = torch.device('cpu')
@@ -40,7 +39,6 @@ def main():
         encoder = AlexNet()
         encoder.load_pretrained(file=pretrained_siamfc_alexnet)
     elif encoder_arch == 'random_walk':
-        encoder = AlexNet()
         encoder.load_pretrained(file=pretrained_crw_resnet)
     else:
         raise ValueError('Invalid encoder architecture specified.')
