@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import torch
 from siamfc import *
+from .submodules.videowalk import resnet
 
 
 # Tracker settings
@@ -23,7 +24,10 @@ epoch_num = 50
 lr = 1e-2
 
 # Pre-trained encoder file
-pretrained_encoder = 'pretrained/siamfc_alexnet_e50.pth'
+encoder_arch = 'alexnet'
+pretrained_siamfc_alexnet = 'pretrained/siamfc_alexnet_e50.pth'
+pretrained_crw_resnet = 'submodules/videowalk/pretrained.pth'
+
 
 # Data directory
 data_dir = './data/GOT-10k/train/GOT-10k_Train_000040/'
@@ -32,8 +36,14 @@ device = torch.device('cpu')
 
 def main():
     # Load pre-trained encoder
-    encoder = AlexNet()
-    encoder.load_pretrained(file=pretrained_encoder)
+    if encoder_arch == 'alexnet':
+        encoder = AlexNet()
+        encoder.load_pretrained(file=pretrained_siamfc_alexnet)
+    elif encoder_arch == 'random_walk':
+        encoder = AlexNet()
+        encoder.load_pretrained(file=pretrained_crw_resnet)
+    else:
+        raise ValueError('Invalid encoder architecture specified.')
     
     # Initialize SiamFC network and set to .eval() mode
     siamese_model = SiamFCNet(

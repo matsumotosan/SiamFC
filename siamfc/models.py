@@ -14,33 +14,6 @@ class AlexNet(nn.Module):
     """
     def __init__(self) -> None:
         super().__init__()
-        # self.model = nn.Sequential(
-        #     # Layer 1
-        #     nn.Conv2d(3, 96, 11, 2, groups=1),
-        #     nn.BatchNorm2d(96),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool2d(3, 2),
-            
-        #     # Layer 2
-        #     nn.Conv2d(96, 256, 5, 1, groups=2),
-        #     nn.BatchNorm2d(256),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool2d(3, 2),
-            
-        #     # Layer 3
-        #     nn.Conv2d(256, 384, 3, 1, groups=1),
-        #     nn.BatchNorm2d(384),
-        #     nn.ReLU(inplace=True),
-            
-        #     # Layer 4
-        #     nn.Conv2d(384, 384, 3, 1, groups=2),
-        #     nn.BatchNorm2d(384),
-        #     nn.ReLU(inplace=True),
-            
-        #     # Layer 5
-        #     nn.Conv2d(384, 256, 3, 1, groups=2)
-        # )
-        
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, 96, 11, 2, groups=1),
             nn.BatchNorm2d(96),
@@ -66,17 +39,9 @@ class AlexNet(nn.Module):
         self.conv5 = nn.Sequential(
             nn.Conv2d(384, 256, 3, 1, groups=2)
         )
-        # self.model = nn.Sequential(
-        #     self.conv1,
-        #     self.conv2,
-        #     self.conv3,
-        #     self.conv4,
-        #     self.conv5
-        # )
         self.total_stride = 8
     
     def forward(self, x):
-        # self.model(x)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
@@ -84,7 +49,7 @@ class AlexNet(nn.Module):
         x = self.conv5(x)
         return x
 
-    def load_pretrained(self, file, freeze=False) -> None:
+    def load_pretrained(self, file) -> None:
         """Load pretrained network for encoder
         
         Weights are from https://github.com/huanglianghua/siamfc-pytorch.
