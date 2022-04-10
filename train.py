@@ -1,7 +1,7 @@
-"""Train SiamFC network encoder."""
+"""Script to train SiamFC network."""
 import os
 import cv2
-import hydra
+#import hydra
 import torch
 import pytorch_lightning as pl
 from got10k.datasets import *
@@ -14,12 +14,13 @@ from siamfc import *
 # TODO: Specify hyperparameters in config file (can use Hydra)
 batch_size = 8
 epoch_num = 50
-lr = 1e-2
-
+initial_lr = 1e-2
+ultimate_lr = 1e-5
 # CONFIGS
 # TODO: Include config parameters in config file
 # root_dir = '/Users/xiangli/iCloud Drive (Archive)/Desktop/siamfc-pytorch/data/GOT-10k'
-root_dir = 'data/GOT-10k'
+#root_dir = 'data/GOT-10k'
+root_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k'
 pretrained = False
 pretrained_alexnet = 'pretrained/siamfc_alexnet_e50.pth'
 
@@ -38,8 +39,10 @@ def main():
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
         encoder=encoder,
+        epoch_num = epoch_num,
         batch_size=batch_size,
-        lr=lr,
+        initial_lr=initial_lr,
+        ultimate_lr=ultimate_lr,
         loss=bce_loss_balanced
     )
     
@@ -54,13 +57,25 @@ def main():
             dataset, 
             batch_size=batch_size, 
             shuffle=True,
-            drop_last=True
+            drop_last=True,
+            num_workers=0
         )
         
-        trainer = pl.Trainer(min_epochs=epoch_num)
+        val_seqs = GOT10k(root_dir=root_dir, subset='val')
+        dataset_val = Pair(seqs=val_seqs, transforms=transforms)
+        dataloader_val = DataLoader(
+            dataset_val, 
+            batch_size=batch_size, 
+            shuffle=False,
+            drop_last=True,
+            num_workers=0
+        )
+        
+        trainer = pl.Trainer(min_epochs=epoch_num,max_epochs=epoch_num,accelerator="gpu",devices=1)
         trainer.fit(
             model=siamfc_model,
-            train_dataloaders=dataloader
+            train_dataloaders=dataloader,
+            val_dataloaders=dataloader_val
         )
     elif dataset_opt == 1:  # ILSVRC        
         imagenet = ImageNetDataModule(
