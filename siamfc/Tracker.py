@@ -103,7 +103,6 @@ class SiamFCTracker(Tracker):
             img, self.center, self.z_sz,
             out_size = self.cfg.exemplar_sz,
             border_value=self.avg_color)
-        
         #get the deep feature for the exemplar image
         z = torch.from_numpy(z).to(self.device).permute(2,0,1).unsqueeze(0).float()
         self.kernel = self.siamese_net.encoder(z) #size: 1x1x17x17

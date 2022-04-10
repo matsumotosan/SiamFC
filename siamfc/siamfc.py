@@ -3,10 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from .utils import create_labels, xcorr
+from torch.optim.lr_scheduler import ExponentialLR
+import numpy as np
+
 
 
 class SiamFCNet(pl.LightningModule):
-    def __init__(self, encoder, batch_size, lr, loss, output_scale=0.001, pretrained=False):
+    def __init__(self, encoder,epoch_num, batch_size, initial_lr,ultimate_lr, loss, output_scale=0.001, pretrained=False):
         """Fully-convolutional Siamese architecture.
          
         Calculates score map of similarity between embeddings of exemplar images (z)
@@ -33,18 +36,24 @@ class SiamFCNet(pl.LightningModule):
             Option to use pretrained encoder network
         """
         super().__init__()
+        self.cuda = torch.cuda.is_available()
+        print(self.cuda)
+        #self._device = torch.device('cuda:0' if self.cuda else 'cpu')
         self.encoder = encoder
         self.batch_size = batch_size
-        self.lr = lr
+        self.initial_lr = initial_lr
+        self.ultimate_lr = ultimate_lr
+        self.epoch_num = epoch_num
+        self.gamma = np.power(self.ultimate_lr/self.initial_lr,1/self.epoch_num)
         self.loss = loss
-        # self._init_weights()
+        self._init_weights()
         
         self.output_scale = output_scale
         #self.output_stride = self.encoder.output_stride
         self.r_pos = 16
         self.r_neg = 0
         self.total_stride = self.encoder.total_stride
-        
+
     def forward(self, z, x):
         """Calculate response map for pairs of exemplar and search images.
         
@@ -67,22 +76,27 @@ class SiamFCNet(pl.LightningModule):
 
     def training_step(self, batch, batch_idx): #What does batch_nb mean?
         """Returns and logs loss for training step."""
-        loss = self._shared_step(batch, batch_idx)
+        loss, center_error = self._shared_step(batch, batch_idx)
+        self.log("train_loss", loss)
+        self.log('center_error',center_error)
         # result = pl.TrainResult(minimize=loss, on_epoch=True)
         # result.log('train_loss', loss, on_epoch=True)
         return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):
         """Returns loss for validation step."""
-        loss = self._shared_step(batch, batch_idx)
+        loss, center_error = self._shared_step(batch, batch_idx)
+        self.log('train_loss',loss)
+        self.log('center_error',center_error)
         # result = pl.EvalResult(checkpoint_on=loss)
         # result.log('avg_val_loss', loss)
         return {"val_loss": loss}
 
     def configure_optimizers(self): 
         """Returns optimizer for model."""
-        optimizer = torch.optim.Adam(self.encoder.parameters(), lr=self.lr)
-        return optimizer
+        optimizer = torch.optim.Adam(self.encoder.parameters(), lr=self.initial_lr)
+        schedular = ExponentialLR(optimizer,self.gamma)
+        return [optimizer],[schedular]
 
     def _init_weights(self) -> None:
         """Initialize weights of encoder network."""
@@ -108,7 +122,8 @@ class SiamFCNet(pl.LightningModule):
         
         # Calculate cross-correlation response map
         responses = self._xcorr(hz, hx) * self.output_scale
-        
+        responses_np = responses.detach().cpu().numpy()
+        center_error = self.center_error(responses_np,self.total_stride)
         # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
             labels = create_labels(
@@ -122,40 +137,35 @@ class SiamFCNet(pl.LightningModule):
         # Calculate loss
         loss = self.loss(responses, self.labels)
         
-        return loss
+        return loss,center_error
     
-    def _xcorr(self, z, x):
-        """Calculates cross-correlation between exemplar exemplar and search image embeddings.
-    
-        Parameters
-        ----------
-        z : ndarray of shape (N, C, Hz, Wz)
-            Exemplar images embeddings
-        
-        x : ndarray of shape (N, C, Hx, Wx)
-            Search images embeddings
-        
-        scale_factor: int, default=None
-            Upsampling scaling factor (same in all spatial dimensions)
-            Bertinetto et al. set to 16 during tracking (17, 17) -> (272, 272)
-            Can be set to 'None' (implicitly equal to 1) during training
-        
-        mode : str, default='bicubic'
-            Upsampling interpolation method
-            Choose from {'linear', 'bilinear', 'bicubic', 'trilinear', False}.
-        
-        Returns
-        -------
-        score_map : ndarray of shape (N, 1, Hmap * scale_factor, Wmap * scale_factor)
-            Score map
-            
-        References
-        ----------
-        https://pytorch.org/docs/stable/generated/torch.nn.functional.upsample.html#torch.nn.functional.upsample
-        """
-        nz = z.size(0)
-        nx, c, h, w = x.size()
-        x = x.view(-1, nz * c, h, w)
-        out = F.conv2d(x, z, groups=nz)
-        out = out.view(nx, -1, out.size(-2), out.size(-1))
+    def _xcorr(self,hz,hx):
+        nz = hz.size(0)
+        nx, c, h, w = hx.size()
+        hx = hx.view(-1,nz*c,h,w)
+        out = F.conv2d(hx,hz,groups=nz)
+        out = out.view(nx,-1,out.size(-2),out.size(-1))
         return out
+    
+    def center_error(self,output, upscale_factor):
+        """This metric measures the displacement between the estimated center of the target and the ground-truth 
+        
+        Args:
+            output: (np.ndarray) The output of the network with dimension [Bx1xHxW]
+            upscale_factor: (int) Indicates how much we must upscale the output feature map to match it to he input images
+        
+        Returns:
+            c_error:(int) The center displacement in pixels
+        """
+        b = output.shape[0]
+        s = output.shape[-1]
+        out_flat = output.reshape(b,-1)
+        max_idx = np.argmax(out_flat,axis=1)
+        estim_center = np.stack([max_idx//s, max_idx%s],axis=1)
+        dist = np.linalg.norm(estim_center-s//2,axis=1)
+        c_error = dist.mean()
+        c_error = c_error*upscale_factor
+        return c_error
+    
+        
+        
