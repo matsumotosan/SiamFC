@@ -7,6 +7,7 @@ from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 
 
+
 class SiamFCNet(pl.LightningModule):
     def __init__(self, encoder,epoch_num, batch_size, initial_lr,ultimate_lr, loss, output_scale=0.001, pretrained=False):
         """Fully-convolutional Siamese architecture.
@@ -36,7 +37,7 @@ class SiamFCNet(pl.LightningModule):
         """
         super().__init__()
         self.cuda = torch.cuda.is_available()
-        # print(self.cuda)
+        print(self.cuda)
         #self._device = torch.device('cuda:0' if self.cuda else 'cpu')
         self.encoder = encoder
         self.batch_size = batch_size
@@ -45,7 +46,7 @@ class SiamFCNet(pl.LightningModule):
         self.epoch_num = epoch_num
         self.gamma = np.power(self.ultimate_lr/self.initial_lr,1/self.epoch_num)
         self.loss = loss
-        # self._init_weights()
+        self._init_weights()
         
         self.output_scale = output_scale
         #self.output_stride = self.encoder.output_stride
@@ -85,7 +86,7 @@ class SiamFCNet(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         """Returns loss for validation step."""
         loss, center_error = self._shared_step(batch, batch_idx)
-        self.log('train_loss',loss)
+        self.log('val_loss',loss)
         self.log('center_error',center_error)
         # result = pl.EvalResult(checkpoint_on=loss)
         # result.log('avg_val_loss', loss)
@@ -133,6 +134,7 @@ class SiamFCNet(pl.LightningModule):
             )
             self.labels = torch.from_numpy(labels).to(self.device).float()
         
+        #print(responses.dtype,self.labels.dtype)
         # Calculate loss
         loss = self.loss(responses, self.labels)
         

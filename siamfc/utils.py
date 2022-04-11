@@ -59,7 +59,7 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     labels = np.where(
         dist <= r_pos, 
         np.ones_like(x), 
-        -np.ones_like(x)
+        np.zeros_like(x)
     )
 
     # Reshape to match size of score map

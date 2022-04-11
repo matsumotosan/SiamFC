@@ -21,7 +21,7 @@ def bce_loss_balanced(scores, labels):
     """
     # Calculate mask of positive and negative examples
     pos_mask = (labels == 1)
-    neg_mask = (labels == -1)
+    neg_mask = (labels == 0)
     
     # Calculate number of positive and negative examples
     pos_num = pos_mask.sum().float()
