@@ -7,7 +7,6 @@ from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 
 
-
 class SiamFCNet(pl.LightningModule):
     def __init__(self, encoder,epoch_num, batch_size, initial_lr,ultimate_lr, loss, output_scale=0.001, pretrained=False):
         """Fully-convolutional Siamese architecture.
@@ -46,7 +45,7 @@ class SiamFCNet(pl.LightningModule):
         self.epoch_num = epoch_num
         self.gamma = np.power(self.ultimate_lr/self.initial_lr,1/self.epoch_num)
         self.loss = loss
-        self._init_weights()
+        # self._init_weights()
         
         self.output_scale = output_scale
         #self.output_stride = self.encoder.output_stride

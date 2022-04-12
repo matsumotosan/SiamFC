@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from collections import OrderedDict
 
 
 class AlexNet(nn.Module):
@@ -47,17 +48,27 @@ class AlexNet(nn.Module):
         x = self.conv5(x)
         return x
 
-    def load_pretrained(self, file, freeze=False) -> None:
+    def load_pretrained(self, file) -> None:
         """Load pretrained network for encoder
+        
+        Weights are from https://github.com/huanglianghua/siamfc-pytorch.
         
         Parameters
         ----------
         file : str
             File containing pretrained network parameters
         """
-        self.model.load_state_dict(torch.load(file, map_location=torch.device('cpu')))
-        if freeze:
-            self.model.freeze()
+        # Load state_dict
+        state_dict = torch.load(file, map_location=torch.device('cpu'))
+       
+        # Rename state_dict keys to match our model
+        new_state_dict = OrderedDict() 
+        for (k, v) in state_dict.items():
+            new_k = k[9:]
+            new_state_dict[new_k] = v
+        
+        # Load weights using new state_dict
+        self.load_state_dict(new_state_dict)
             
 
 # class _BatchNorm2d(nn.BatchNorm2d):
