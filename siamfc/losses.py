@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#import numpy as np
-#from utils import*
+
 
 def bce_loss_balanced(scores, labels):
     """Calculate binary cross-entropy loss for predicted score map.
@@ -39,7 +38,7 @@ def bce_loss_balanced(scores, labels):
     
     return loss
 
-def triplet_loss(scores,labels):
+def triplet_loss(scores, labels):
     """Calculate triplet loss for predicted score map.
     
     Parameters
@@ -54,26 +53,19 @@ def triplet_loss(scores,labels):
     -------
     triplet loss: torch.Tensor
     """
-    N,C,W,H = labels.shape
+    N, C, W, H = labels.shape
     loss = 0
+    
     for i in range(N):
         label = labels[i].flatten()
         score = scores[i].flatten()
         n = torch.sum(label==0).item() #Number of negative instances
         m = torch.sum(label==1).item() #Number of positive instances
-        v_p = score[label==1].reshape(m,1)  #Extract the positive score vector 
-        v_n = score[label==0].reshape(n,1)  #Extract the negative score vector
-        V_p = torch.tile(v_p,(1,n))
-        V_n = torch.tile(v_n,(1,m))
+        v_p = score[label==1].reshape(m, 1)  #Extract the positive score vector 
+        v_n = score[label==0].reshape(n, 1)  #Extract the negative score vector
+        V_p = torch.tile(v_p, (1, n))
+        V_n = torch.tile(v_n, (1, m))
         V_p = V_p.T
-        loss = loss+torch.sum(torch.log(1+torch.exp(V_n-V_p)))/(m*n)
+        loss = loss+torch.sum(torch.log(1 + torch.exp(V_n - V_p))) / (m * n)
+        
     return loss
-# if __name__ == '__main__':
-#     '''
-#     Test code for the triplet loss. loss=10.5601
-#     '''
-#     size = np.array([8,1,17,17])
-#     labels = torch.from_numpy(create_labels(size,8,16))
-#     scores = torch.zeros(labels.shape)
-#     scores[labels==0] = 1
-#     loss = triplet_loss(scores,labels) 

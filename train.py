@@ -1,7 +1,6 @@
 """Script to train SiamFC network."""
 import os
 import cv2
-#import hydra
 import torch
 import pytorch_lightning as pl
 from got10k.datasets import *
@@ -16,19 +15,22 @@ batch_size = 8
 epoch_num = 50
 initial_lr = 1e-2
 ultimate_lr = 1e-5
+
 # CONFIGS
 # TODO: Include config parameters in config file
 # root_dir = '/Users/xiangli/iCloud Drive (Archive)/Desktop/siamfc-pytorch/data/GOT-10k'
-#root_dir = 'data/GOT-10k'
-root_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k'
+root_dir = 'data/GOT-10k'
+# root_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k'
 pretrained = False
 pretrained_alexnet = 'pretrained/siamfc_alexnet_e50.pth'
 
 # For debugging
+accelerator = ('gpu' if torch.cuda.is_available() else 'cpu')
 dataset_opt = 0
 
 
 def main():
+    
     torch.set_default_dtype(torch.float32)
     # Initialize encoder for SiamFC
     encoder = AlexNet()
@@ -40,7 +42,7 @@ def main():
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
         encoder=encoder,
-        epoch_num = epoch_num,
+        epoch_num=epoch_num,
         batch_size=batch_size,
         initial_lr=initial_lr,
         ultimate_lr=ultimate_lr,
@@ -72,7 +74,12 @@ def main():
             num_workers=6
         )
         
-        trainer = pl.Trainer(min_epochs=epoch_num,max_epochs=epoch_num,accelerator="gpu",devices=1)
+        trainer = pl.Trainer(
+            min_epochs=epoch_num,
+            max_epochs=epoch_num,
+            accelerator=accelerator,
+            devices=1
+        )
         trainer.fit(
             model=siamfc_model,
             train_dataloaders=dataloader

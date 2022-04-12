@@ -1,5 +1,8 @@
 from siamfc.datasets import ImageNetDataModule, Pair
-from siamfc.losses import bce_loss_balanced
+from siamfc.losses import (
+    bce_loss_balanced,
+    triplet_loss
+)
 from siamfc.models import AlexNet
 from siamfc.siamfc import SiamFCNet
 from siamfc.Tracker import SiamFCTracker
@@ -32,5 +35,6 @@ __all__ = [
     "SiamFCNet",
     "SiamFCTracker",
     "SiamFCTransforms",
-    "ToTensor"
+    "ToTensor",
+    "triplet_loss"
 ]
