@@ -6,6 +6,7 @@ import torch
 from siamfc import *
 from got10k.trackers import Tracker
 import pytorch_lightning as pl
+from siamfc.resnet import *
 
 # Tracker settings
 response_up = 16
@@ -26,28 +27,18 @@ initial_lr = 1e-2
 ultimate_lr = 1e-5
 
 # Pre-trained encoder file
-encoder_arch = 'alexnet'
-pretrained_siamfc_alexnet = 'pretrained/siamfc_alexnet_e50.pth'
-pretrained_crw_resnet = 'submodules/videowalk/pretrained.pth'
+pretrained_encoder_pth = 'pretrained/siamfc_alexnet_e50.pth'
 
 # Data directory
-data_dir = './data/GOT-10k/train/GOT-10k_Train_000001/'
-# data_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001/'
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Notes
-# Test 100: struggle to distinguish between two chicks, fast motion
-# Test 101: partial occlusion
-# Test 150: four skaters, frequently switches between skaters due to similar appearance
+#data_dir = './data/GOT-10k/train/GOT-10k_Train_000001/'
+data_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001/'
+device = torch.device('cpu')
 
 
 def main():
     # Load pre-trained encoder
-    if encoder_arch == 'alexnet':
-        encoder = AlexNet()
-        encoder.load_pretrained(file=pretrained_siamfc_alexnet)
-    elif encoder_arch == 'random_walk':
-        encoder.load_pretrained(file=pretrained_crw_resnet)
+    encoder = AlexNet()
+    # encoder.load_state_dict(torch.load(pretrained_encoder_pth, map_location=device))
     
     # Initialize SiamFC network
     siamese_net = SiamFCNet(
@@ -59,8 +50,9 @@ def main():
         loss=bce_loss_balanced
     )
     
-    # ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
-    # siamese_net.load_state_dict(ckpt['state_dict'])
+    ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_9/checkpoints/epoch=49-step=58300.ckpt')
+    #ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_14/checkpoints/epoch=49-step=58300.ckpt')
+    siamese_net.load_state_dict(ckpt['state_dict'])
     #siamese_net = SiamFCNet.load_from_checkpoint('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
     
     # Initialize tracker
@@ -73,10 +65,25 @@ def main():
     img_files = sorted(glob.glob(data_dir + '*.jpg'))
     anno = np.loadtxt(data_dir + 'groundtruth.txt', delimiter=',')
     
-    # Run tracker
-    # tracker.track(img_files, anno, visualize=True) 
+    # Run tracker 
     tracker.track(img_files, anno[0], visualize=True)
 
+def resnet18_track():
+    encoder = resnet_18(pretrained=True)
+    siamese_net = SiamFCNet(encoder=encoder,
+                            epoch_num = epoch_num,
+                            batch_size=batch_size,
+                            initial_lr=initial_lr,
+                            ultimate_lr = ultimate_lr,
+                            loss=bce_loss_balanced,
+                            preprocess = True,init_weights=False)
+    tracker = SiamFCTracker(siamese_net=siamese_net)
+    img_files = sorted(glob.glob(data_dir + '*.jpg'))
+    anno = np.loadtxt(data_dir + 'groundtruth.txt', delimiter=',')
+    
+    # Run tracker 
+    tracker.track(img_files, anno[0], visualize=True)
 
 if __name__ == '__main__':
-    main()
+    #main()
+    resnet18_track()
