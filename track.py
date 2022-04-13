@@ -31,7 +31,8 @@ pretrained_siamfc_alexnet = 'pretrained/siamfc_alexnet_e50.pth'
 pretrained_crw_resnet = 'submodules/videowalk/pretrained.pth'
 
 # Data directory
-data_dir = './data/GOT-10k/train/GOT-10k_Train_000001/'
+# data_dir = './data/GOT-10k/train/GOT-10k_Train_000001/'
+data_dir = './data/GOT-10k/test/GOT-10k_Test_000150/'
 # data_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001/'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -74,8 +75,8 @@ def main():
     anno = np.loadtxt(data_dir + 'groundtruth.txt', delimiter=',')
     
     # Run tracker
-    # tracker.track(img_files, anno, visualize=True) 
-    tracker.track(img_files, anno[0], visualize=True)
+    # tracker.track(img_files, anno[0], visualize=True)   # training videos
+    tracker.track(img_files, anno, visualize=True)    # test videos
 
 
 if __name__ == '__main__':

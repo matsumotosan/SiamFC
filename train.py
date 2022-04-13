@@ -1,11 +1,8 @@
 """Script to train SiamFC network."""
-import os
-import cv2
 import torch
 import pytorch_lightning as pl
 from got10k.datasets import *
 from torch.utils.data import DataLoader
-from torchvision import transforms as T
 from siamfc import *
 
 
@@ -30,7 +27,6 @@ dataset_opt = 0
 
 
 def main():
-    
     torch.set_default_dtype(torch.float32)
     # Initialize encoder for SiamFC
     encoder = AlexNet()

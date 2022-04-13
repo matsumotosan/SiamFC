@@ -1,37 +1,23 @@
-import os
-import cv2
 import time
-import glob
 import torch
+import cv2 as cv
 import numpy as np
-from got10k.trackers import Tracker
 from siamfc.utils  import crop_and_resize, read_image, show_image
 from collections import namedtuple
 
-# Tracker configurations
-response_up = 16
-response_sz = 17
-scale_step = 1.025 #1.0375
-scale_lr = 0.35 #0.59
-scale_penalty = 0.975
-scale_num = 5 #3
-exemplar_sz = 127
-instance_sz = 255
-context = 0.5
 
-
-class SiamFCTracker(Tracker):
-    def __init__(self, net_path=None, siamese_net=None, **kwargs):
-        super().__init__('SiamFC', True)
-        assert siamese_net != None
-        
+class SiamFCTracker:
+    """Tracking head for SiamFC network.
+    
+    Parameters
+    ----------
+    siamese_net : nn.Module
+        SiamFC network with pretrained weights.
+    """
+    def __init__(self, siamese_net, **kwargs):
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.siamese_net = siamese_net
-        self.cuda = torch.cuda.is_available()
-        self.device = torch.device('cuda:0' if self.cuda else 'cpu')
         self.siamese_net.eval()
-        
-        if net_path is not None:
-            self.siamese_net.encoder.load_state_dict(torch.load(net_path,map_location=self.device))
         self.siamese_net.to(self.device)
         self.cfg = self.parse_args(**kwargs)
         
@@ -69,46 +55,119 @@ class SiamFCTracker(Tracker):
                 cfg.update({key: val})
         return namedtuple('Config', cfg.keys())(**cfg)
     
+    def track(self, img_files, box, visualize=False):
+        """Track given set of frames given initial box. Optionally visualize tracking.
+        
+        Parameters
+        ----------
+        img_files : list (frames,)
+            Ordered list of files to frames
+        
+        box : ndarray of shape (4,)
+            Initial box
+        
+        visualize : bool, default=False
+            Visualize tracking if True
+        
+        Returns
+        -------
+        boxes : ndarray of shape (frames, 4)
+            Bounding box for object at each frame
+
+        t : ndarray of shape (frames,)
+            Time stamps
+        """
+        # Get total number of frames
+        n_frames = len(img_files)
+        
+        # Initialize tracking box for each frame
+        boxes = np.zeros((n_frames, 4))
+        boxes[0] = box
+        t = np.zeros(n_frames)
+        
+        # Iterate through each frame
+        for frame, img_file in enumerate(img_files):
+            img = read_image(img_file)
+            t0 = time.time()
+            if frame == 0:
+                self.init(img, boxes[0])
+            else:
+                boxes[frame, :] = self.update(img)
+                
+            t[frame] = time.time() - t0
+            if visualize:
+                show_image(img, boxes[frame, :])
+                
+        return boxes, t
+    
     @torch.no_grad()
-    def init(self, img, box):
-        # convert box to 0-indexed and center based [y, x, h, w]
-        # Notice that the box given by GOT-10k has format ltwh(left, top, width, height)
-        box = np.array([
-            box[1] - 1 + (box[3] - 1) / 2,
-            box[0] - 1 + (box[2] - 1) / 2,
-            box[3], box[2]], dtype=np.float32)
-        self.center, self.target_sz = box[:2], box[2:]
+    def init(self, img, box, box_style='ltwh') -> None:
+        """Initialize tracking box.
         
-        # create hanning window, which is used to regularize the response map 
-        self.upscale_sz = self.cfg.response_up*self.cfg.response_sz #This is the size of the response map after upsampling
-        self.hann_window = np.outer(
-            np.hanning(self.upscale_sz),
-            np.hanning(self.upscale_sz))
-        self.hann_window /= self.hann_window.sum()
+        Parameters
+        ----------
+        img :
+            Initial image
         
-        # search scale factors
+        box :
+            Initial box
+            
+        box_style : str, default='ltwh'
+            Annotation format of box dimensions
+        """
+        # Convert box format to be 0-indexed and center based [y, x, h, w]
+        if box_style == 'ltwh':
+            box = np.array([
+                box[1] + (box[3] - 1) / 2 - 1,
+                box[0] + (box[2] - 1) / 2 - 1,
+                box[3], box[2]],
+                dtype=np.float32)
+            self.center, self.target_sz = box[:2], box[2:]
+        
+        # Calculate size of upsampled response map
+        self.upsample_sz = self.cfg.response_up * self.cfg.response_sz
+        
+        # Create hanning window to regularize response map
+        self.hanning_window = np.outer(
+            np.hanning(self.upsample_sz),
+            np.hanning(self.upsample_sz))
+        self.hanning_window /= self.hanning_window.sum()
+        
+        # Search scale factors
         self.scale_factors = self.cfg.scale_step ** np.linspace(
             -(self.cfg.scale_num // 2),
           self.cfg.scale_num // 2, self.cfg.scale_num)
         
-        # exemplar and search sizes
+        # Exemplar and search sizes
         margin = self.cfg.context * np.sum(self.target_sz)
         self.z_sz = np.sqrt(np.prod(self.target_sz + margin))
-        self.x_sz = self.z_sz * \
-            self.cfg.instance_sz / self.cfg.exemplar_sz
+        self.x_sz = self.z_sz * (self.cfg.instance_sz / self.cfg.exemplar_sz)
         
-        #get the exemplar image from the first frame
-        self.avg_color = np.mean(img,axis=(0,1))
+        # Get exemplar image from the first frame
+        self.avg_color = np.mean(img, axis=(0, 1))
         z = crop_and_resize(
             img, self.center, self.z_sz,
             out_size = self.cfg.exemplar_sz,
             border_value=self.avg_color)
-        #get the deep feature for the exemplar image
+        
+        # Get the deep feature for the exemplar image
         z = torch.from_numpy(z).to(self.device).permute(2,0,1).unsqueeze(0).float()
         self.kernel = self.siamese_net.encoder(z) #size: 1x1x17x17
     
     @torch.no_grad()
     def update(self, img):
+        """Update tracker box given new frame.
+        
+        Parameters
+        ----------
+        img : ndarray of shape (H, W, 3)
+            New frame to be tracked
+        
+        Returns
+        -------
+        box : ndarray of shape (4,)
+            Bounding box for new frame
+        """
         # search images
         x = [crop_and_resize(
             img, self.center, self.x_sz * f,
@@ -127,9 +186,9 @@ class SiamFCTracker(Tracker):
         
         #upsample responses and penalizae scale change
         #responses has size: (scale_num x 272 x 272 )
-        responses = np.stack([cv2.resize(
-            u, (self.upscale_sz, self.upscale_sz),
-            interpolation=cv2.INTER_CUBIC)
+        responses = np.stack([cv.resize(
+            u, (self.upsample_sz, self.upsample_sz),
+            interpolation=cv.INTER_CUBIC)
             for u in responses]) 
         responses[:self.cfg.scale_num // 2] *= self.cfg.scale_penalty
         responses[self.cfg.scale_num // 2 + 1:] *= self.cfg.scale_penalty
@@ -143,11 +202,11 @@ class SiamFCTracker(Tracker):
         response /= response.sum() + 1e-16
         #Apply hanning window to the response map
         response = (1 - self.cfg.window_influence) * response + \
-            self.cfg.window_influence * self.hann_window
+            self.cfg.window_influence * self.hanning_window
         loc = np.unravel_index(response.argmax(), response.shape)
 
         # locate target center
-        disp_in_response = np.array(loc) - (self.upscale_sz - 1) / 2
+        disp_in_response = np.array(loc) - (self.upsample_sz - 1) / 2
         disp_in_instance = disp_in_response * \
             self.siamese_net.total_stride / self.cfg.response_up
         disp_in_image = disp_in_instance * self.x_sz * \
@@ -168,23 +227,3 @@ class SiamFCTracker(Tracker):
             self.target_sz[1], self.target_sz[0]])
 
         return box
-    
-    def track(self, img_files, box, visualize=False):
-        frame_num = len(img_files)
-        boxes = np.zeros((frame_num,4))
-        boxes[0] = box
-        times = np.zeros(frame_num)
-        
-        for f, img_file in enumerate(img_files):
-            img = read_image(img_file)
-            begin = time.time()
-            if f == 0:
-                self.init(img, box)
-            else:
-                boxes[f, :] = self.update(img)
-            times[f] = time.time() - begin
-
-            if visualize:
-                show_image(img, boxes[f, :])
-
-        return boxes, times

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from .utils import create_labels, xcorr
+from .utils import create_labels
 from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 
@@ -137,9 +137,9 @@ class SiamFCNet(pl.LightningModule):
         # Calculate loss
         loss = self.loss(responses, self.labels)
         
-        return loss,center_error
+        return loss, center_error
     
-    def _xcorr(self,hz,hx):
+    def _xcorr(self, hz, hx):
         nz = hz.size(0)
         nx, c, h, w = hx.size()
         hx = hx.view(-1,nz*c,h,w)

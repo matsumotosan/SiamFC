@@ -14,24 +14,16 @@ from siamfc.transforms import (
     SiamFCTransforms,
     ToTensor
 )
-from siamfc.utils import (
-    crop_and_resize,
-    read_image, 
-    show_image
-)
 
 __all__ = [
     "AlexNet",
     "bce_loss_balanced",
     "CenterCrop",
     "Compose",
-    "crop_and_resize",
     "ImageNetDataModule",
     "Pair",
-    "read_image",
     "RandomCrop",
     "RandomStretch",
-    "show_image",
     "SiamFCNet",
     "SiamFCTracker",
     "SiamFCTransforms",
