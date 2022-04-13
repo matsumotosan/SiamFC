@@ -1,47 +1,38 @@
 """Script to train SiamFC network."""
+import argparse
 import torch
 import pytorch_lightning as pl
+from omegaconf import OmegaConf
 from got10k.datasets import *
 from torch.utils.data import DataLoader
 from siamfc import *
-
-
-# HYPERPARAMETERS
-# TODO: Specify hyperparameters in config file (can use Hydra)
-batch_size = 8
-epoch_num = 50
-initial_lr = 1e-2
-ultimate_lr = 1e-5
-
-# CONFIGS
-# TODO: Include config parameters in config file
-# root_dir = '/Users/xiangli/iCloud Drive (Archive)/Desktop/siamfc-pytorch/data/GOT-10k'
-root_dir = 'data/GOT-10k'
-# root_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k'
-pretrained = False
-pretrained_alexnet = 'pretrained/siamfc_alexnet_e50.pth'
 
 # For debugging
 accelerator = ('gpu' if torch.cuda.is_available() else 'cpu')
 dataset_opt = 0
 
 
-def main():
+def main(cfg):
     torch.set_default_dtype(torch.float32)
-    # Initialize encoder for SiamFC
-    encoder = AlexNet()
     
-    # Load pretrained encoder
-    if pretrained:
-        encoder.load_pretrained(pretrained_alexnet)
+    # Initialize encoder
+    if cfg.network.arch == 'alexnet':
+        encoder = AlexNet()
+    elif cfg.network.arch == 'random_walk':
+        # encoder = CRW_ResNet()
+        pass
+    
+    # Load pretrained weights (if available)
+    if cfg.network.pretrained:
+        encoder.load_pretrained(cfg.network.pretrained)
     
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
         encoder=encoder,
-        epoch_num=epoch_num,
-        batch_size=batch_size,
-        initial_lr=initial_lr,
-        ultimate_lr=ultimate_lr,
+        epoch_num = cfg.hparams.epoch_num,
+        batch_size=cfg.hparams.batch_size,
+        initial_lr=cfg.hparams.initial_lr,
+        ultimate_lr=cfg.hparams.ultimate_lr,
         loss=bce_loss_balanced
     )
     
@@ -93,4 +84,18 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Tracking with SiamFC."
+    )
+    parser.add_argument(
+        "--config",
+        dest="config_file", 
+        default="./conf/train/config.yaml",
+        help="Path to config file."
+    )
+    
+    args = parser.parse_args()
+    with open(args.config_file) as f:
+        cfg = OmegaConf.load(f)
+        
+    main(cfg)
