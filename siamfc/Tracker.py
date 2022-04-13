@@ -1,3 +1,5 @@
+"""Tracker class for SiamFC architecture. Based on the GOT-10k toolkit Tracker class at
+https://github.com/got-10k/toolkit/blob/master/got10k/trackers/__init__.py."""
 import time
 import torch
 import cv2 as cv
@@ -151,7 +153,7 @@ class SiamFCTracker:
             border_value=self.avg_color)
         
         # Get the deep feature for the exemplar image
-        z = torch.from_numpy(z).to(self.device).permute(2,0,1).unsqueeze(0).float()
+        z = torch.from_numpy(z).to(self.device).permute(2, 0, 1).unsqueeze(0).float()
         self.kernel = self.siamese_net.encoder(z) #size: 1x1x17x17
     
     @torch.no_grad()
@@ -161,51 +163,56 @@ class SiamFCTracker:
         Parameters
         ----------
         img : ndarray of shape (H, W, 3)
-            New frame to be tracked
+            Next frame to be tracked
         
         Returns
         -------
         box : ndarray of shape (4,)
             Bounding box for new frame
         """
-        # search images
+        # Get search images at different scales
         x = [crop_and_resize(
-            img, self.center, self.x_sz * f,
-            out_size=self.cfg.instance_sz,
-            border_value=self.avg_color) for f in self.scale_factors]
+                img, 
+                self.center, 
+                self.x_sz * f,
+                out_size=self.cfg.instance_sz,
+                border_value=self.avg_color) 
+            for f in self.scale_factors]
         x = np.stack(x, axis=0)
         x = torch.from_numpy(x).to(
             self.device).permute(0, 3, 1, 2).float()
         
-        #compute deep features for x
-        x = self.siamese_net.encoder(x) 
+        # Calculate search image embedding
+        x = self.siamese_net.encoder(x)
         
-        #compute response map
-        responses = self.siamese_net._xcorr(self.kernel,x) #size: (scale_num x 1 x 17 x 17)
-        responses = responses.squeeze(1).cpu().numpy() #size: (scale_num x 17 x 17)
+        # Compute response map (scale_num, 1, 17, 17)
+        responses = self.siamese_net._xcorr(self.kernel, x)
+        responses = responses.squeeze(1).cpu().numpy() # size: (scale_num x 17 x 17)
         
-        #upsample responses and penalizae scale change
-        #responses has size: (scale_num x 272 x 272 )
-        responses = np.stack([cv.resize(
-            u, (self.upsample_sz, self.upsample_sz),
+        # Upsample response map (17, 17) -> (272, 272)
+        responses = np.stack([cv.resize(r, 
+            (self.upsample_sz, self.upsample_sz),
             interpolation=cv.INTER_CUBIC)
-            for u in responses]) 
+            for r in responses]) 
+        
+        # Penalize scale change
         responses[:self.cfg.scale_num // 2] *= self.cfg.scale_penalty
         responses[self.cfg.scale_num // 2 + 1:] *= self.cfg.scale_penalty
         
-        #choose the response map with the largest peak value
-        scale_id = np.argmax(np.amax(responses,axis=(1,2)))
-        
-        # peak location
+        # Choose response map with largest peak value
+        scale_id = np.argmax(np.amax(responses, axis=(1, 2)))
         response = responses[scale_id]
+        
+        # Normalize response map
         response -= response.min()
         response /= response.sum() + 1e-16
-        #Apply hanning window to the response map
+        
+        # Apply hanning window to the response map
         response = (1 - self.cfg.window_influence) * response + \
             self.cfg.window_influence * self.hanning_window
         loc = np.unravel_index(response.argmax(), response.shape)
 
-        # locate target center
+        # Locate target center
         disp_in_response = np.array(loc) - (self.upsample_sz - 1) / 2
         disp_in_instance = disp_in_response * \
             self.siamese_net.total_stride / self.cfg.response_up
@@ -213,14 +220,14 @@ class SiamFCTracker:
             self.scale_factors[scale_id] / self.cfg.instance_sz
         self.center += disp_in_image
 
-        # update target size
+        # Update target size
         scale =  (1 - self.cfg.scale_lr) * 1.0 + \
             self.cfg.scale_lr * self.scale_factors[scale_id]
         self.target_sz *= scale
         self.z_sz *= scale
         self.x_sz *= scale
 
-        # return 1-indexed and left-top based bounding box
+        # Return 1-indexed and left-top based bounding box
         box = np.array([
             self.center[1] + 1 - (self.target_sz[1] - 1) / 2,
             self.center[0] + 1 - (self.target_sz[0] - 1) / 2,

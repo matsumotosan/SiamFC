@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
-from .utils import create_labels
 from torch.optim.lr_scheduler import ExponentialLR
+import pytorch_lightning as pl
 import numpy as np
+from .utils import create_labels
 
 
 class SiamFCNet(pl.LightningModule):
@@ -95,7 +95,7 @@ class SiamFCNet(pl.LightningModule):
         """Returns optimizer for model."""
         optimizer = torch.optim.Adam(self.encoder.parameters(), lr=self.initial_lr)
         schedular = ExponentialLR(optimizer,self.gamma)
-        return [optimizer],[schedular]
+        return [optimizer], [schedular]
 
     def _init_weights(self) -> None:
         """Initialize weights of encoder network."""
@@ -123,6 +123,7 @@ class SiamFCNet(pl.LightningModule):
         responses = self._xcorr(hz, hx) * self.output_scale
         responses_np = responses.detach().cpu().numpy()
         center_error = self.center_error(responses_np,self.total_stride)
+        
         # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
             labels = create_labels(
@@ -133,7 +134,6 @@ class SiamFCNet(pl.LightningModule):
             )
             self.labels = torch.from_numpy(labels).to(self.device).float()
         
-        #print(responses.dtype,self.labels.dtype)
         # Calculate loss
         loss = self.loss(responses, self.labels)
         

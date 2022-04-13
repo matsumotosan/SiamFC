@@ -7,3 +7,4 @@ scale_num: 5 #3
 exemplar_sz: 127
 instance_sz: 255
 context: 0.5
+window_influence: 0.176
