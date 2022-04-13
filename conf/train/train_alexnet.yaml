@@ -8,6 +8,7 @@ hparams:
   initial_lr: 1e-2
   ultimate_lr: 1e-5
 data:
+  name: got10k
   root_dir: data/GOT-10k
 tracker:
   response_up: 16

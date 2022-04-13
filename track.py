@@ -60,7 +60,7 @@ if __name__ == '__main__':
         "--config",
         dest="config_file", 
         default="./conf/track/track_alexnet.yaml",
-        help="Path to config file."
+        help="Path to tracking config file."
     )
     
     args = parser.parse_args()

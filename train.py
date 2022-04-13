@@ -1,18 +1,15 @@
 """Script to train SiamFC network."""
 import argparse
 import torch
+from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
-from got10k.datasets import *
-from torch.utils.data import DataLoader
+from got10k.datasets import GOT10k
 from siamfc import *
-
-# For debugging
-accelerator = ('gpu' if torch.cuda.is_available() else 'cpu')
-dataset_opt = 0
 
 
 def main(cfg):
+    accelerator = ('gpu' if torch.cuda.is_available() else 'cpu')
     torch.set_default_dtype(torch.float32)
     
     # Initialize encoder
@@ -29,7 +26,7 @@ def main(cfg):
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
         encoder=encoder,
-        epoch_num = cfg.hparams.epoch_num,
+        epoch_num=cfg.hparams.epoch_num,
         batch_size=cfg.hparams.batch_size,
         initial_lr=cfg.hparams.initial_lr,
         ultimate_lr=cfg.hparams.ultimate_lr,
@@ -39,59 +36,74 @@ def main(cfg):
     # Define transforms
     transforms = SiamFCTransforms()
     
-    # Initialize dataloader
-    if dataset_opt == 0:    # GOT-10k
-        seqs = GOT10k(root_dir=root_dir, subset='train')
-        dataset = Pair(seqs=seqs, transforms=transforms)
-        dataloader = DataLoader(
-            dataset, 
-            batch_size=batch_size, 
+    # Initialize dataloaders
+    if cfg.data.name == "got10k":
+        # Training
+        seqs = GOT10k(root_dir=cfg.data.root_dir, subset='train')
+        train_dataset = Pair(seqs=seqs, transforms=transforms)
+        train_dataloader = DataLoader(
+            train_dataset, 
+            batch_size=cfg.hparams.batch_size, 
             shuffle=True,
             drop_last=True,
             num_workers=6
         )
         
-        val_seqs = GOT10k(root_dir=root_dir, subset='val')
-        dataset_val = Pair(seqs=val_seqs, transforms=transforms)
-        dataloader_val = DataLoader(
-            dataset_val, 
-            batch_size=batch_size, 
+        # Validation
+        val_seqs = GOT10k(root_dir=cfg.data.root_dir, subset='val')
+        val_dataset = Pair(seqs=val_seqs, transforms=transforms)
+        val_dataloader = DataLoader(
+            val_dataset, 
+            batch_size=cfg.hparams.batch_size, 
             shuffle=False,
             drop_last=True,
             num_workers=6
         )
         
-        trainer = pl.Trainer(
-            min_epochs=epoch_num,
-            max_epochs=epoch_num,
-            accelerator=accelerator,
-            devices=1
-        )
-        trainer.fit(
-            model=siamfc_model,
-            train_dataloaders=dataloader
-            #val_dataloaders=dataloader_val
-        )
-    elif dataset_opt == 1:  # ILSVRC        
-        imagenet = ImageNetDataModule(
-            data_dir=root_dir,
-            transform=transforms,
-            batch_size=batch_size
+        # Test
+        test_seqs = GOT10k(root_dir=cfg.data.root_dir, subset='test')
+        test_dataset = Pair(seqs=test_seqs, transforms=transforms)
+        test_dataloader = DataLoader(
+            test_dataset, 
+            batch_size=cfg.hparams.batch_size, 
+            shuffle=False,
+            drop_last=True,
+            num_workers=6
         )
         
-        trainer = pl.Trainer(min_epochs=epoch_num)
-        trainer.fit(siamfc_model, datamodule=imagenet)
+    elif cfg.data.name == "imagenet":    
+        imagenet = ImageNetDataModule(
+            data_dir=cfg.data.root_dir,
+            transform=transforms,
+            batch_size=cfg.hparams.batch_size
+        )
+
+    # Initialize trainer
+    trainer = pl.Trainer(
+        min_epochs=cfg.hparams.epoch_num,
+        max_epochs=cfg.hparams.epoch_num,
+        accelerator=accelerator,
+        devices=1
+    )
+    
+    # Train model
+    trainer.fit(
+        model=siamfc_model,
+        train_dataloaders=train_dataloader
+        # val_dataloaders=val_dataloader,
+        # test_dataloaders=test_dataloader
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Tracking with SiamFC."
+        description="Training SiamFC network."
     )
     parser.add_argument(
         "--config",
         dest="config_file", 
-        default="./conf/train/config.yaml",
-        help="Path to config file."
+        default="./conf/train/train_alexnet.yaml",
+        help="Path to training config file."
     )
     
     args = parser.parse_args()
