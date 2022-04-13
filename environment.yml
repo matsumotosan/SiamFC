@@ -6,6 +6,6 @@ dependencies:
   - torchvision
   - pytorch-lightning
   - opencv
-  - hydra-core
   - matplotlib
   - numpy
+  - omegaconf
