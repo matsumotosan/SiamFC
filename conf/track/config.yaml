@@ -1,0 +1,22 @@
+# Default configurations
+network:
+  arch: alexnet
+  pretrained: pretrained/siamfc_alexnet_e50.pth
+hparams:
+  batch_size: 8
+  epoch_num: 50
+  initial_lr: 1e-2
+  ultimate_lr: 1e-5
+data:
+  root_dir: data/GOT-10k
+tracker:
+  response_up: 16
+  response_sz: 17
+  scale_step: 1.025 #1.0375
+  scale_lr: 0.35 #0.59
+  scale_penalty: 0.975
+  scale_num: 5 #3
+  exemplar_sz: 127
+  instance_sz: 255
+  context: 0.5
+  window_influence: 0.176

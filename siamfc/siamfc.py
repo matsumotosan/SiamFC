@@ -147,7 +147,7 @@ class SiamFCNet(pl.LightningModule):
         out = out.view(nx,-1,out.size(-2),out.size(-1))
         return out
     
-    def center_error(self,output, upscale_factor):
+    def center_error(self, output, upscale_factor):
         """This metric measures the displacement between the estimated center of the target and the ground-truth 
         
         Args:

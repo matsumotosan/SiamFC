@@ -1,29 +1,13 @@
 """Script to run tracking using trained SiamFC network."""
 import os
 import glob
-import numpy as np
 import torch
-from siamfc import *
-from got10k.trackers import Tracker
+import yaml
+import argparse
+import numpy as np
 import pytorch_lightning as pl
-
-# Tracker settings
-response_up = 16
-response_sz = 17
-scale_step = 1.025 #1.0375
-scale_lr = 0.35 #0.59
-scale_penalty = 0.975
-scale_num = 5 #3
-exemplar_sz = 127
-instance_sz = 255
-context = 0.5
-window_influence = 0.176
-
-# Hyperparmaters
-batch_size = 8
-epoch_num = 50
-initial_lr = 1e-2
-ultimate_lr = 1e-5
+from siamfc import *
+from omegaconf import OmegaConf
 
 # Pre-trained encoder file
 encoder_arch = 'alexnet'
@@ -42,27 +26,27 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Test 150: four skaters, frequently switches between skaters due to similar appearance
 
 
-def main():
+def main(cfg):
     # Load pre-trained encoder
-    if encoder_arch == 'alexnet':
+    if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
         encoder.load_pretrained(file=pretrained_siamfc_alexnet)
-    elif encoder_arch == 'random_walk':
+    elif cfg.network.arch == 'random_walk':
         encoder.load_pretrained(file=pretrained_crw_resnet)
     
     # Initialize SiamFC network
     siamese_net = SiamFCNet(
         encoder=encoder,
-        epoch_num = epoch_num,
-        batch_size=batch_size,
-        initial_lr=initial_lr,
-        ultimate_lr = ultimate_lr,
+        epoch_num = cfg.hparams.epoch_num,
+        batch_size=cfg.hparams.batch_size,
+        initial_lr=cfg.hparams.initial_lr,
+        ultimate_lr = cfg.hparams.ultimate_lr,
         loss=bce_loss_balanced
     )
     
     # ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
     # siamese_net.load_state_dict(ckpt['state_dict'])
-    #siamese_net = SiamFCNet.load_from_checkpoint('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
+    # siamese_net = SiamFCNet.load_from_checkpoint('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
     
     # Initialize tracker
     tracker = SiamFCTracker(
@@ -80,4 +64,19 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    
+    parser = argparse.ArgumentParser(
+        description="Tracking with SiamFC."
+    )
+    parser.add_argument(
+        "--config",
+        dest="config_file", 
+        default="./conf/config.yaml",
+        help="Path to config file."
+    )
+    
+    args = parser.parse_args()
+    with open(args.config_file) as f:
+        cfg = OmegaConf.load(f)
+        
+    main(cfg)

@@ -152,10 +152,10 @@ class SiamFCTracker:
             out_size = self.cfg.exemplar_sz,
             border_value=self.avg_color)
         
-        # Get the deep feature for the exemplar image
+        # Calculate exemplar image embedding (kernel)
         z = torch.from_numpy(z).to(self.device).permute(2, 0, 1).unsqueeze(0).float()
-        self.kernel = self.siamese_net.encoder(z) #size: 1x1x17x17
-    
+        self.kernel = self.siamese_net.encoder(z)
+        
     @torch.no_grad()
     def update(self, img):
         """Update tracker box given new frame.
@@ -211,7 +211,7 @@ class SiamFCTracker:
         response = (1 - self.cfg.window_influence) * response + \
             self.cfg.window_influence * self.hanning_window
         loc = np.unravel_index(response.argmax(), response.shape)
-
+        
         # Locate target center
         disp_in_response = np.array(loc) - (self.upsample_sz - 1) / 2
         disp_in_instance = disp_in_response * \
@@ -221,16 +221,17 @@ class SiamFCTracker:
         self.center += disp_in_image
 
         # Update target size
-        scale =  (1 - self.cfg.scale_lr) * 1.0 + \
+        scale = (1 - self.cfg.scale_lr) * 1.0 + \
             self.cfg.scale_lr * self.scale_factors[scale_id]
+            
         self.target_sz *= scale
         self.z_sz *= scale
         self.x_sz *= scale
-
+        
         # Return 1-indexed and left-top based bounding box
         box = np.array([
             self.center[1] + 1 - (self.target_sz[1] - 1) / 2,
             self.center[0] + 1 - (self.target_sz[0] - 1) / 2,
             self.target_sz[1], self.target_sz[0]])
-
+        
         return box
