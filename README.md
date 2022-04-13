@@ -6,7 +6,7 @@ PyTorch implementation of [Fully-Convolutional Siamese Networks for Object Track
 
 The SiamFC architecture consists the same convolutional function in parallel to embed the target and search images. Once embedded, the cross-correlation of the embeddings is calculated to determine the similarities betwee
 
-![siamfc_arch](figures/siam_arch.png)
+![siamfc_arch](figures/siamfc_arch.png)
 
 ## Installation
 
