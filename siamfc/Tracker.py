@@ -9,15 +9,15 @@ from siamfc.utils  import crop_and_resize, read_image, show_image
 from collections import namedtuple
 
 # Tracker configurations
-response_up = 16
-response_sz = 17
-scale_step = 1.025 #1.0375
-scale_lr = 0.35 #0.59
-scale_penalty = 0.975
-scale_num = 5 #3
-exemplar_sz = 127
-instance_sz = 255
-context = 0.5
+# response_up = 16
+# response_sz = 17
+# scale_step = 1.025 #1.0375
+# scale_lr = 0.35 #0.59
+# scale_penalty = 0.975
+# scale_num = 5 #3
+# exemplar_sz = 127
+# instance_sz = 255
+# context = 0.5
 
 
 class SiamFCTracker(Tracker):
@@ -45,8 +45,8 @@ class SiamFCTracker(Tracker):
             'context': 0.5,
             # inference parameters
             'scale_num': 3, #5
-            'scale_step': 1.025, #1.0375,
-            'scale_lr': 0.35, #0.59,
+            'scale_step': 1.0375, #1.025,
+            'scale_lr': 0.59, #0.35,
             'scale_penalty': 0.9745,
             'window_influence': 0.176,
             'response_sz': 17,
@@ -105,6 +105,9 @@ class SiamFCTracker(Tracker):
             border_value=self.avg_color)
         #get the deep feature for the exemplar image
         z = torch.from_numpy(z).to(self.device).permute(2,0,1).unsqueeze(0).float()
+        if self.siamese_net.preprocess == True:
+            z = z/255
+            z = self.siamese_net.normalize(z)
         self.kernel = self.siamese_net.encoder(z) #size: 1x1x17x17
     
     @torch.no_grad()
@@ -117,7 +120,9 @@ class SiamFCTracker(Tracker):
         x = np.stack(x, axis=0)
         x = torch.from_numpy(x).to(
             self.device).permute(0, 3, 1, 2).float()
-        
+        if self.siamese_net.preprocess == True:
+            x = x/255
+            x = self.siamese_net.normalize(x)
         #compute deep features for x
         x = self.siamese_net.encoder(x) 
         

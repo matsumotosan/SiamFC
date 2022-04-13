@@ -5,10 +5,12 @@ import pytorch_lightning as pl
 from .utils import create_labels, xcorr
 from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
+from torchvision import transforms
+
 
 
 class SiamFCNet(pl.LightningModule):
-    def __init__(self, encoder,epoch_num, batch_size, initial_lr,ultimate_lr, loss, output_scale=0.001, pretrained=False):
+    def __init__(self, encoder=None,epoch_num=None, batch_size=None, initial_lr=None,ultimate_lr=None, loss=None, output_scale=0.001, pretrained=False, preprocess=False,init_weights=True):
         """Fully-convolutional Siamese architecture.
          
         Calculates score map of similarity between embeddings of exemplar images (z)
@@ -35,9 +37,12 @@ class SiamFCNet(pl.LightningModule):
             Option to use pretrained encoder network
         """
         super().__init__()
+        self.preprocess = preprocess
+        self.normalize = torch.nn.Sequential(
+            transforms.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225])
+            )
+        
         self.cuda = torch.cuda.is_available()
-        print(self.cuda)
-        #self._device = torch.device('cuda:0' if self.cuda else 'cpu')
         self.encoder = encoder
         self.batch_size = batch_size
         self.initial_lr = initial_lr
@@ -45,10 +50,10 @@ class SiamFCNet(pl.LightningModule):
         self.epoch_num = epoch_num
         self.gamma = np.power(self.ultimate_lr/self.initial_lr,1/self.epoch_num)
         self.loss = loss
-        # self._init_weights()
+        if init_weights == True:
+            self._init_weights()
         
         self.output_scale = output_scale
-        #self.output_stride = self.encoder.output_stride
         self.r_pos = 16
         self.r_neg = 0
         self.total_stride = self.encoder.total_stride
@@ -116,6 +121,11 @@ class SiamFCNet(pl.LightningModule):
         """Returns loss for pass through model with provided batch."""
         # Encode exemplar and search images
         (z, x) = batch
+        # if self.preprocess == True:
+        #     z = z/255
+        #     x = x/255
+        #     z = self.normalize(z)
+        #     x = self.normalize(x)
         hz = self.encoder(z)
         hx = self.encoder(x)
         
