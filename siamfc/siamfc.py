@@ -35,8 +35,8 @@ class SiamFCNet(pl.LightningModule):
             Option to use pretrained encoder network
         """
         super().__init__()
-        self.cuda = torch.cuda.is_available()
-        print(self.cuda)
+        # self.cuda = torch.cuda.is_available()
+        # print(self.cuda)
         #self._device = torch.device('cuda:0' if self.cuda else 'cpu')
         self.encoder = encoder
         self.batch_size = batch_size

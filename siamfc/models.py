@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-
+# import submodules.videowalk as vw
 
 class AlexNet(nn.Module):
     """AlexNet encoder architecture as specified by Bertinetto et al. (2016).

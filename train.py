@@ -1,6 +1,6 @@
 """Script to train SiamFC network."""
 import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
+# os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import argparse
 import torch
 from torch.utils.data import DataLoader
