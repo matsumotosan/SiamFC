@@ -1,4 +1,6 @@
 """Script to train SiamFC network."""
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import argparse
 import torch
 from torch.utils.data import DataLoader
@@ -6,6 +8,8 @@ import pytorch_lightning as pl
 from omegaconf import OmegaConf
 from got10k.datasets import GOT10k
 from siamfc import *
+
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
 def main(cfg):
@@ -16,8 +20,7 @@ def main(cfg):
     if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
     elif cfg.network.arch == 'random_walk':
-        # encoder = CRW_ResNet()
-        pass
+        encoder = ResNet()
     
     # Load pretrained weights (if available)
     if cfg.network.pretrained:

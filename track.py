@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 from omegaconf import OmegaConf
 from siamfc import *
+from submodules.videowalk.code import resnet
 
 # Notes
 # Test 100: struggle to distinguish between two chicks, fast motion
@@ -12,15 +13,16 @@ from siamfc import *
 
 
 def main(cfg):
-    # Initialize encoder
+    # Load pretrained encoder
     if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
-    elif cfg.network.arch == 'random_walk':
-        # encoder = CRW_ResNet()
-        pass
-    
-    # Load pretrained weights 
-    encoder.load_pretrained(file=cfg.network.pretrained)
+        encoder.load_pretrained(file=cfg.network.pretrained)
+    elif cfg.network.arch == 'resnet18':
+        encoder = resnet.resnet18(pretrained=cfg.network.pretrained)
+    elif cfg.network.arch == 'resnet50':
+        encoder = resnet.resnet50(pretrained=cfg.network.pretrained)
+    else:
+        raise ValueError('Invalid network architecture specified.')
     
     # Initialize SiamFC network
     siamese_net = SiamFCNet(

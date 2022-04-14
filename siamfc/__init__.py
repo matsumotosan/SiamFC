@@ -1,13 +1,10 @@
 from siamfc.datasets import GOT10kDataModule, ImageNetDataModule, Pair
-from siamfc.losses import (
-    bce_loss_balanced,
-    triplet_loss
-)
+from siamfc.losses import bce_loss_balanced, triplet_loss
 from siamfc.models import AlexNet
 from siamfc.siamfc import SiamFCNet
 from siamfc.Tracker import SiamFCTracker
 from siamfc.transforms import (
-    Compose, 
+    Compose,
     RandomStretch, 
     CenterCrop, 
     RandomCrop,
@@ -25,6 +22,7 @@ __all__ = [
     "Pair",
     "RandomCrop",
     "RandomStretch",
+    # "ResNet",
     "SiamFCNet",
     "SiamFCTracker",
     "SiamFCTransforms",

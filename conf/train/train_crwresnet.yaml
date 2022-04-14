@@ -1,6 +1,6 @@
 # Default configurations
 network:
-  arch: alexnet
+  arch: resnet18
   pretrained: submodules/videowalk/pretrained.pth
 hparams:
   batch_size: 8
