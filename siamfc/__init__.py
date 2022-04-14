@@ -1,6 +1,6 @@
 from siamfc.datasets import GOT10kDataModule, ImageNetDataModule, Pair
 from siamfc.losses import bce_loss_balanced, triplet_loss
-from siamfc.models import AlexNet
+from models.alexnet import AlexNet
 from siamfc.siamfc import SiamFCNet
 from siamfc.Tracker import SiamFCTracker
 from siamfc.transforms import (

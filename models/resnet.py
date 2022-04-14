@@ -1,4 +1,4 @@
-"""ResNet class based on implementation in https://github.com/ajabri/videowalk."""
+"""ResNet class based on implementation in https://github.com/Zhongdao/UniTrack/blob/main/model/resnet.py."""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,7 +10,8 @@ except ImportError:
 import torchvision.models.resnet as torch_resnet
 from torchvision.models.resnet import BasicBlock, Bottleneck
 
-model_urls = {'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
+model_urls = {
+    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
     'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
     'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
@@ -63,8 +64,7 @@ class ResNet(torch_resnet.ResNet):
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
-                                              progress=progress)
+        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         model.load_state_dict(state_dict)
     return model
 
@@ -77,7 +77,7 @@ def resnet50(pretrained=False, progress=True, **kwargs) -> ResNet:
                    **kwargs)
 
 class resnet_18(nn.Module):
-    def __init__(self,feature_layer='layer3',pretrained=False):
+    def __init__(self, feature_layer='layer3', pretrained=False):
         super().__init__()
         self.model = resnet18(pretrained=pretrained)
         if feature_layer == 'layer3':
@@ -86,11 +86,11 @@ class resnet_18(nn.Module):
             self.model.modify()
         self.total_stride = 8
     
-    def forward(self,x):
+    def forward(self, x):
         return self.model(x)
     
 class resnet_50(nn.Module):
-    def __init__(self,feature_layer='layer3',pretrained=False):
+    def __init__(self, feature_layer='layer3', pretrained=False):
         super().__init__()
         self.model = resnet50(pretrained=pretrained)
         if feature_layer == 'layer3':
@@ -99,6 +99,6 @@ class resnet_50(nn.Module):
             self.model.modify()
         self.total_stride = 8
     
-    def forward(self,x):
+    def forward(self, x):
         return self.model(x)
     

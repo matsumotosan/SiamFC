@@ -6,7 +6,7 @@ import numpy as np
 from omegaconf import OmegaConf
 from collections import OrderedDict
 from siamfc import *
-from siamfc.resnet import resnet_18, resnet_50
+from models import *
 
 
 # Data directory
