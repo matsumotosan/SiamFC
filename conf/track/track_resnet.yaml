@@ -1,0 +1,22 @@
+# Default configurations
+network:
+  arch: resnet18
+  pretrained: submodules/videowalk/pretrained.pth
+hparams:
+  batch_size: 8
+  epoch_num: 50
+  initial_lr: 1e-2
+  ultimate_lr: 1e-5
+data_dir: data/GOT-10k/train/GOT-10k_Train_000070/
+# data_dir: data/GOT-10k/test/GOT-10k_Test_000100/
+tracker:
+  response_up: 16
+  response_sz: 17
+  scale_step: 1.025 #1.0375
+  scale_lr: 0.35 #0.59
+  scale_penalty: 0.975
+  scale_num: 5 #3
+  exemplar_sz: 127
+  instance_sz: 255
+  context: 0.5
+  window_influence: 0.176

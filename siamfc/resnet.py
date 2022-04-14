@@ -1,12 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 12 17:10:42 2022
-
-@author: xiangli
-"""
-
-
+"""ResNet class based on implementation in https://github.com/ajabri/videowalk."""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -109,15 +101,4 @@ class resnet_50(nn.Module):
     
     def forward(self,x):
         return self.model(x)
-        
-
-if __name__ == '__main__':
-    #resnet = resnet18()
-    resnet = resnet_50()
-    x = torch.randn(8,3,255,255)
-    z = torch.randn(8,3,127,127)
-    x_feature = resnet(x)
-    z_feature = resnet(z)
-    print('shape of z:',z_feature.shape)
-    print('shape of x:',x_feature.shape)
     

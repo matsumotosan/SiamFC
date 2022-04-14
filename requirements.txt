@@ -1,0 +1,61 @@
+absl-py==1.0.0
+aiohttp==3.8.1
+aiosignal==1.2.0
+antlr4-python3-runtime==4.8
+async-timeout==4.0.2
+attrs==21.4.0
+brotlipy @ file:///Users/runner/miniforge3/conda-bld/brotlipy_1648854210220/work
+cachetools==5.0.0
+certifi==2021.10.8
+cffi @ file:///Users/runner/miniforge3/conda-bld/cffi_1636046170920/work
+charset-normalizer @ file:///home/conda/feedstock_root/build_artifacts/charset-normalizer_1644853463426/work
+cryptography @ file:///Users/builder/ci_310/cryptography_1642543758909/work
+cycler==0.11.0
+fire==0.4.0
+fonttools==4.32.0
+frozenlist==1.3.0
+fsspec==2022.3.0
+google-auth==2.6.4
+google-auth-oauthlib==0.4.6
+got10k==0.1.3
+grpcio==1.44.0
+idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1642433548627/work
+kiwisolver==1.4.2
+Markdown==3.3.6
+matplotlib==3.5.1
+multidict==6.0.2
+numpy @ file:///Users/runner/miniforge3/conda-bld/numpy_1649572703737/work
+oauthlib==3.2.0
+omegaconf==2.1.2
+opencv-python==4.5.5
+packaging==21.3
+Pillow @ file:///Users/runner/miniforge3/conda-bld/pillow_1649818043148/work
+protobuf==3.20.0
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
+pycparser @ file:///home/conda/feedstock_root/build_artifacts/pycparser_1636257122734/work
+pyDeprecate==0.3.2
+pyOpenSSL @ file:///home/conda/feedstock_root/build_artifacts/pyopenssl_1643496850550/work
+pyparsing==3.0.8
+PySocks @ file:///Users/runner/miniforge3/conda-bld/pysocks_1648857336495/work
+python-dateutil==2.8.2
+pytorch-lightning==1.6.1
+PyYAML==6.0
+requests @ file:///home/conda/feedstock_root/build_artifacts/requests_1641580202195/work
+requests-oauthlib==1.3.1
+rsa==4.8
+Shapely==1.8.1.post1
+six==1.16.0
+tensorboard==2.8.0
+tensorboard-data-server==0.6.1
+tensorboard-plugin-wit==1.8.1
+termcolor==1.1.0
+torch==1.11.0
+torchmetrics==0.7.3
+torchvision==0.12.0
+tqdm==4.64.0
+typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1644850595256/work
+urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1647489083693/work
+Werkzeug==2.1.1
+wget==3.2
+yarl==1.7.2

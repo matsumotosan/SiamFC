@@ -1,17 +1,28 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
-from .utils import create_labels, xcorr
 from torch.optim.lr_scheduler import ExponentialLR
+import pytorch_lightning as pl
 import numpy as np
 from torchvision import transforms
-
+from .utils import create_labels
 
 
 class SiamFCNet(pl.LightningModule):
-    def __init__(self, encoder=None,epoch_num=None, batch_size=None, initial_lr=None,ultimate_lr=None, loss=None, output_scale=0.001, pretrained=False, preprocess=False,init_weights=True):
-        """Fully-convolutional Siamese architecture.
+    def __init__(
+        self, 
+        encoder=None,
+        epoch_num=None, 
+        batch_size=None, 
+        initial_lr=None,
+        ultimate_lr=None, 
+        loss=None, 
+        output_scale=0.001, 
+        pretrained=False, 
+        preprocess=False,
+        init_weights=True
+        ):
+        """Fully-convolutional Siamese architecture (SiamFC).
          
         Calculates score map of similarity between embeddings of exemplar images (z)
         with respect to search images (x).
@@ -100,7 +111,7 @@ class SiamFCNet(pl.LightningModule):
         """Returns optimizer for model."""
         optimizer = torch.optim.Adam(self.encoder.parameters(), lr=self.initial_lr)
         schedular = ExponentialLR(optimizer,self.gamma)
-        return [optimizer],[schedular]
+        return [optimizer], [schedular]
 
     def _init_weights(self) -> None:
         """Initialize weights of encoder network."""
@@ -133,6 +144,7 @@ class SiamFCNet(pl.LightningModule):
         responses = self._xcorr(hz, hx) * self.output_scale
         responses_np = responses.detach().cpu().numpy()
         center_error = self.center_error(responses_np,self.total_stride)
+        
         # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
             labels = create_labels(
@@ -143,13 +155,12 @@ class SiamFCNet(pl.LightningModule):
             )
             self.labels = torch.from_numpy(labels).to(self.device).float()
         
-        #print(responses.dtype,self.labels.dtype)
         # Calculate loss
         loss = self.loss(responses, self.labels)
         
-        return loss,center_error
+        return loss, center_error
     
-    def _xcorr(self,hz,hx):
+    def _xcorr(self, hz, hx):
         nz = hz.size(0)
         nx, c, h, w = hx.size()
         hx = hx.view(-1,nz*c,h,w)
@@ -157,7 +168,7 @@ class SiamFCNet(pl.LightningModule):
         out = out.view(nx,-1,out.size(-2),out.size(-1))
         return out
     
-    def center_error(self,output, upscale_factor):
+    def center_error(self, output, upscale_factor):
         """This metric measures the displacement between the estimated center of the target and the ground-truth 
         
         Args:

@@ -1,58 +1,65 @@
 """Script to run tracking using trained SiamFC network."""
-import os
 import glob
-import numpy as np
+import argparse
 import torch
+import numpy as np
+from omegaconf import OmegaConf
+from collections import OrderedDict
 from siamfc import *
-from got10k.trackers import Tracker
-import pytorch_lightning as pl
-from siamfc.resnet import *
+from siamfc.resnet import resnet_18, resnet_50
 
-# Tracker settings
-response_up = 16
-response_sz = 17
-scale_step = 1.025 #1.0375
-scale_lr = 0.35 #0.59
-scale_penalty = 0.975
-scale_num = 5 #3
-exemplar_sz = 127
-instance_sz = 255
-context = 0.5
-window_influence = 0.176
-
-# Hyperparmaters
-batch_size = 8
-epoch_num = 50
-initial_lr = 1e-2
-ultimate_lr = 1e-5
-
-# Pre-trained encoder file
-pretrained_encoder_pth = 'pretrained/siamfc_alexnet_e50.pth'
 
 # Data directory
-#data_dir = './data/GOT-10k/train/GOT-10k_Train_000001/'
-data_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001/'
-device = torch.device('cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Notes
+# Test 100: struggle to distinguish between two chicks, fast motion
+# Test 101: partial occlusion
+# Test 150: four skaters, frequently switches between skaters due to similar appearance
 
 
-def main():
-    # Load pre-trained encoder
-    encoder = AlexNet()
-    # encoder.load_state_dict(torch.load(pretrained_encoder_pth, map_location=device))
+def main(cfg):
     
+    # Load pretrained encoder
+    if cfg.network.arch == 'alexnet':
+        encoder = AlexNet()
+        encoder.load_pretrained(file=cfg.network.pretrained)
+        preprocess = False
+    elif cfg.network.arch == 'resnet18':
+        encoder = resnet_18(pretrained=True)
+        preprocess = True
+    elif cfg.network.arch == 'crw_resnet18':
+        encoder = resnet_18(pretrained=False)
+        state_dict = torch.load(cfg.network.pretrained, map_location=device)
+        new_state_dict = OrderedDict() 
+        for (k, v) in state_dict['model'].items():
+            if k in ['selfsim_fc.0.weight', 'selfsim_fc.0.bias']:
+                continue
+            new_k = k[8:]
+            new_state_dict[new_k] = v
+        encoder.load_state_dict(new_state_dict)
+        preprocess = True
+    elif cfg.network.arch == 'resnet50':
+        encoder = resnet_50(pretrained=True)
+        preprocess = True
+    else:
+        raise ValueError('Invalid network architecture specified.')
+
     # Initialize SiamFC network
     siamese_net = SiamFCNet(
         encoder=encoder,
-        epoch_num = epoch_num,
-        batch_size=batch_size,
-        initial_lr=initial_lr,
-        ultimate_lr = ultimate_lr,
-        loss=bce_loss_balanced
+        epoch_num = cfg.hparams.epoch_num,
+        batch_size=cfg.hparams.batch_size,
+        initial_lr=cfg.hparams.initial_lr,
+        ultimate_lr=cfg.hparams.ultimate_lr,
+        loss=bce_loss_balanced,
+        preprocess=preprocess,
+        init_weights=False
     )
     
-    ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_9/checkpoints/epoch=49-step=58300.ckpt')
+    # ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_9/checkpoints/epoch=49-step=58300.ckpt')
     #ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_14/checkpoints/epoch=49-step=58300.ckpt')
-    siamese_net.load_state_dict(ckpt['state_dict'])
+    # siamese_net.load_state_dict(ckpt['state_dict'])
     #siamese_net = SiamFCNet.load_from_checkpoint('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
     
     # Initialize tracker
@@ -60,30 +67,27 @@ def main():
         siamese_net=siamese_net
     )
     
-    #print(tracker.device)
     # Get data (images and annotations)
-    img_files = sorted(glob.glob(data_dir + '*.jpg'))
-    anno = np.loadtxt(data_dir + 'groundtruth.txt', delimiter=',')
-    
+    img_files = sorted(glob.glob(cfg.data_dir + '*.jpg'))
+    anno = np.loadtxt(cfg.data_dir + 'groundtruth.txt', delimiter=',').reshape(-1, 4)
+     
     # Run tracker 
     tracker.track(img_files, anno[0], visualize=True)
-
-def resnet18_track():
-    encoder = resnet_18(pretrained=True)
-    siamese_net = SiamFCNet(encoder=encoder,
-                            epoch_num = epoch_num,
-                            batch_size=batch_size,
-                            initial_lr=initial_lr,
-                            ultimate_lr = ultimate_lr,
-                            loss=bce_loss_balanced,
-                            preprocess = True,init_weights=False)
-    tracker = SiamFCTracker(siamese_net=siamese_net)
-    img_files = sorted(glob.glob(data_dir + '*.jpg'))
-    anno = np.loadtxt(data_dir + 'groundtruth.txt', delimiter=',')
     
-    # Run tracker 
-    tracker.track(img_files, anno[0], visualize=True)
 
 if __name__ == '__main__':
-    #main()
-    resnet18_track()
+    parser = argparse.ArgumentParser(
+        description="Tracking with SiamFC."
+    )
+    parser.add_argument(
+        "--config",
+        dest="config_file", 
+        default="./conf/track/track_alexnet.yaml",
+        help="Path to tracking config file."
+    )
+    
+    args = parser.parse_args()
+    with open(args.config_file) as f:
+        cfg = OmegaConf.load(f)
+        
+    main(cfg)
