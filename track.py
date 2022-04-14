@@ -1,16 +1,11 @@
-"""Script to run tracking using trained SiamFC network."""
+"""Tracking using trained SiamFC network."""
 import glob
 import argparse
 import torch
 import numpy as np
 from omegaconf import OmegaConf
-from collections import OrderedDict
 from siamfc import *
 from models import *
-
-
-# Data directory
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Notes
 # Test 100: struggle to distinguish between two chicks, fast motion
@@ -19,36 +14,18 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(cfg):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Load pretrained encoder
-    if cfg.network.arch == 'alexnet':
-        encoder = AlexNet()
-        encoder.load_pretrained(file=cfg.network.pretrained)
-        preprocess = False
-    elif cfg.network.arch == 'resnet18':
-        encoder = resnet_18(pretrained=True)
-        preprocess = True
-    elif cfg.network.arch == 'crw_resnet18':
-        encoder = resnet_18(pretrained=False)
-        state_dict = torch.load(cfg.network.pretrained, map_location=device)
-        new_state_dict = OrderedDict() 
-        for (k, v) in state_dict['model'].items():
-            if k in ['selfsim_fc.0.weight', 'selfsim_fc.0.bias']:
-                continue
-            new_k = k[8:]
-            new_state_dict[new_k] = v
-        encoder.load_state_dict(new_state_dict)
-        preprocess = True
-    elif cfg.network.arch == 'resnet50':
-        encoder = resnet_50(pretrained=True)
-        preprocess = True
-    else:
-        raise ValueError('Invalid network architecture specified.')
+    encoder, preprocess = load_pretrained_encoder(
+        cfg.network.arch, 
+        cfg.network.pretrained,
+        device)
 
     # Initialize SiamFC network
     siamese_net = SiamFCNet(
         encoder=encoder,
-        epoch_num = cfg.hparams.epoch_num,
+        epoch_num=cfg.hparams.epoch_num,
         batch_size=cfg.hparams.batch_size,
         initial_lr=cfg.hparams.initial_lr,
         ultimate_lr=cfg.hparams.ultimate_lr,

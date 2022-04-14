@@ -7,8 +7,8 @@ hparams:
   epoch_num: 50
   initial_lr: 1e-2
   ultimate_lr: 1e-5
-# data_dir: data/GOT-10k/train/GOT-10k_Train_000070/
-data_dir: data/GOT-10k/test/GOT-10k_Test_000150/
+data_dir: data/GOT-10k/train/GOT-10k_Train_000001/
+# data_dir: data/GOT-10k/test/GOT-10k_Test_000150/
 tracker:
   response_up: 16
   response_sz: 17

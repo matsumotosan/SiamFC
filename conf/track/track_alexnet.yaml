@@ -7,7 +7,7 @@ hparams:
   epoch_num: 50
   initial_lr: 1e-2
   ultimate_lr: 1e-5
-data_dir: data/GOT-10k/train/GOT-10k_Test_000001/
+data_dir: data/GOT-10k/train/GOT-10k_Train_000001/
 # data_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001/'
 tracker:
   response_up: 16
