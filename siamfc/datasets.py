@@ -1,12 +1,54 @@
-import cv2
+import cv2 as cv
 import numpy as np
 import pytorch_lightning as pl
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, random_split
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from typing import Optional
+from got10k.datasets import GOT10k
+from .transforms import SiamFCTransforms
 
+
+class GOT10kDataModule(pl.LightningDataModule):
+    """PyTorch Lightning DataModule class for GOT-10k dataset."""
+    def __init__(self, data_dir='./data/GOT-10k', batch_size=8) -> None:
+        super.__init_()
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+    
+    def prepare_data(self) -> None:
+        """Download data"""
+        pass
+    
+    def setup(self) -> None:
+        """Define transforms and data splits."""
+        # Training data
+        train_seqs = GOT10k(root_dir=self.data_dir, subset='train')
+        self.got10k_train = Pair(seqs=train_seqs, transforms=SiamFCTransforms)
+        
+        # Validation data
+        val_seqs = GOT10k(root_dir=self.data_dir, subset='val')
+        self.got10k_val = Pair(seqs=val_seqs, transforms=SiamFCTransforms)
+        
+        # Test data
+        test_seqs = GOT10k(root_dir=self.data_dir, subset='test')
+        self.got10k_test = Pair(seqs=test_seqs, transforms=SiamFCTransforms)
+
+    def train_dataloader(self) -> DataLoader:
+        """Return training dataloader."""
+        got10k_train = DataLoader(self.got10k_train, batch_size=self.batch_size)
+        return got10k_train
+    
+    def val_dataloader(self) -> DataLoader:
+        """Return validation dataloader."""
+        got10k_val = DataLoader(self.got10k_val, batch_size=self.batch_size)
+        return got10k_val
+    
+    def test_dataloader(self) -> DataLoader:
+        """Return testing dataloader"""
+        got10k_test = DataLoader(self.got10k_test, batch_size=self.batch_size)
+        return got10k_test
+        
 
 class ImageNetDataModule(pl.LightningDataModule):
     def __init__(self, data_dir: str, transform, batch_size: int = 32) -> None:
@@ -82,8 +124,8 @@ class Pair(Dataset):
             rand_z, rand_x = np.sort(np.random.choice(frame_indices, 2, replace=False))# The two chosen frames should be at most T frames apart 
         
         # Read exemplar and target images
-        z = cv2.imread(img_files[rand_z], cv2.IMREAD_COLOR) #May need to be converted to RGB color space
-        x = cv2.imread(img_files[rand_x], cv2.IMREAD_COLOR) #May need to be converted to RGB color space
+        z = cv.imread(img_files[rand_z], cv.IMREAD_COLOR) #May need to be converted to RGB color space
+        x = cv.imread(img_files[rand_x], cv.IMREAD_COLOR) #May need to be converted to RGB color space
         
         # Get annotations for exemplar and target images
         box_z = anno[rand_z]

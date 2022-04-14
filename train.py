@@ -38,6 +38,8 @@ def main(cfg):
     
     # Initialize dataloaders
     if cfg.data.name == "got10k":
+        got10k_dm = GOT10kDataModule()
+        
         # Training
         seqs = GOT10k(root_dir=cfg.data.root_dir, subset='train')
         train_dataset = Pair(seqs=seqs, transforms=transforms)
@@ -86,12 +88,17 @@ def main(cfg):
         devices=1
     )
     
-    # Train model
+    # # Train model
+    # trainer.fit(
+    #     model=siamfc_model,
+    #     train_dataloaders=train_dataloader
+    #     # val_dataloaders=val_dataloader,
+    #     # test_dataloaders=test_dataloader
+    # )
+    
     trainer.fit(
         model=siamfc_model,
-        train_dataloaders=train_dataloader
-        # val_dataloaders=val_dataloader,
-        # test_dataloaders=test_dataloader
+        datamodule=got10k_dm
     )
 
 

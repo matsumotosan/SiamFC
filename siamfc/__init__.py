@@ -1,4 +1,4 @@
-from siamfc.datasets import ImageNetDataModule, Pair
+from siamfc.datasets import GOT10kDataModule, ImageNetDataModule, Pair
 from siamfc.losses import (
     bce_loss_balanced,
     triplet_loss
@@ -20,6 +20,7 @@ __all__ = [
     "bce_loss_balanced",
     "CenterCrop",
     "Compose",
+    "GOT10kDataModule",
     "ImageNetDataModule",
     "Pair",
     "RandomCrop",

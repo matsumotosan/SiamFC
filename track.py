@@ -2,9 +2,8 @@
 import glob
 import argparse
 import numpy as np
-import pytorch_lightning as pl
-from siamfc import *
 from omegaconf import OmegaConf
+from siamfc import *
 
 # Notes
 # Test 100: struggle to distinguish between two chicks, fast motion
