@@ -15,10 +15,11 @@ class SiamFCNet(pl.LightningModule):
         epoch_num=None, 
         batch_size=None, 
         initial_lr=None,
-        ultimate_lr=None, 
+        ultimate_lr=None,
+        weight_decay=1e-4,
         loss=None, 
         output_scale=0.001, 
-        pretrained=False, 
+        pretrained=False,
         preprocess=False,
         init_weights=True
         ):
@@ -58,6 +59,7 @@ class SiamFCNet(pl.LightningModule):
         self.batch_size = batch_size
         self.initial_lr = initial_lr
         self.ultimate_lr = ultimate_lr
+        self.weight_decay = weight_decay
         self.epoch_num = epoch_num
         self.gamma = np.power(self.ultimate_lr/self.initial_lr,1/self.epoch_num)
         self.loss = loss
@@ -109,7 +111,7 @@ class SiamFCNet(pl.LightningModule):
 
     def configure_optimizers(self): 
         """Returns optimizer for model."""
-        optimizer = torch.optim.Adam(self.encoder.parameters(), lr=self.initial_lr)
+        optimizer = torch.optim.Adam(self.encoder.parameters(), lr=self.initial_lr, weight_decay=self.weight_decay)
         schedular = ExponentialLR(optimizer,self.gamma)
         return [optimizer], [schedular]
 

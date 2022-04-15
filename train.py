@@ -3,6 +3,7 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import TensorBoardLogger
 from omegaconf import OmegaConf
 from got10k.datasets import GOT10k
 from siamfc import *
@@ -10,18 +11,19 @@ from models import *
 
 
 def main(cfg):
-    accelerator = ('gpu' if torch.cuda.is_available() else 'cpu')
+    # accelerator = ('gpu' if torch.cuda.is_available() else 'cpu')
     torch.set_default_dtype(torch.float32)
     
     # Initialize encoder
     if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
+        # encoder = AlexNet_torch()
     # elif cfg.network.arch == 'random_walk':
     #     encoder = ResNet()
     
     # Load pretrained weights (if available)
-    if cfg.network.pretrained:
-        encoder.load_pretrained(cfg.network.pretrained)
+    # if cfg.network.pretrained:
+        # encoder.load_pretrained(cfg.network.pretrained)
     
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
@@ -30,6 +32,7 @@ def main(cfg):
         batch_size=cfg.hparams.batch_size,
         initial_lr=cfg.hparams.initial_lr,
         ultimate_lr=cfg.hparams.ultimate_lr,
+        weight_decay=cfg.hparams.weight_decay,
         loss=bce_loss_balanced
     )
     
@@ -80,19 +83,25 @@ def main(cfg):
             batch_size=cfg.hparams.batch_size
         )
 
+    logger = TensorBoardLogger(
+        save_dir="tb_logs",
+        name=cfg.network.arch
+    ) 
+
     # Initialize trainer
     trainer = pl.Trainer(
         min_epochs=cfg.hparams.epoch_num,
         max_epochs=cfg.hparams.epoch_num,
-        accelerator=accelerator,
-        devices=1
+        accelerator="auto",
+        devices="auto",
+        logger=logger
     )
-    
+
     # Train model
     trainer.fit(
         model=siamfc_model,
-        train_dataloaders=train_dataloader
-        # val_dataloaders=val_dataloader,
+        train_dataloaders=train_dataloader,
+        val_dataloaders=val_dataloader,
         # test_dataloaders=test_dataloader
     )
     

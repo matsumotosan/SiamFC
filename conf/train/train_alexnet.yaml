@@ -7,6 +7,7 @@ hparams:
   epoch_num: 50
   initial_lr: 1e-2
   ultimate_lr: 1e-5
+  weight_decay: 5e-4
 data:
   name: got10k
   root_dir: data/GOT-10k

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-# import submodules.videowalk as vw
+
 
 class AlexNet(nn.Module):
     """AlexNet encoder architecture as specified by Bertinetto et al. (2016).
@@ -69,3 +69,35 @@ class AlexNet(nn.Module):
         
         # Load weights using new state_dict
         self.load_state_dict(new_state_dict)
+
+
+class AlexNet_torch(nn.Module):
+    def __init__(self,pretrained=False):
+        super(AlexNet_torch,self).__init__()
+        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=pretrained)
+        self.total_stride = 8
+            
+    def modify(self,padding=''):
+        #remove the average pooling layer and the classifier
+        remove_layers = ['avgpool','classifier']
+        for layer in remove_layers:
+            setattr(self.model,layer,None)
+        #remove the last relu activation and pooling layer 
+        self.model.features[12] = None
+        self.model.features[11] = None
+        #set the stride of the first conv layer to be 2
+        self.model.features[0].stride = tuple(2 for _ in self.model.features[0].stride)
+        #modify the padding if specified
+        if padding != '' and padding != 'no':
+            for m in self.model.modules():
+                if isinstance(m, torch.nn.Conv2d) and sum(m.padding) > 0:
+                    m.padding_mode = padding
+        elif padding == 'no':
+            for m in self.model.modules():
+                if isinstance(m, torch.nn.Conv2d) and sum(m.padding) > 0:
+                    m.padding = (0,0)
+        
+    def forward(self, x):
+        for i in range(11):
+            x = self.model.features[i](x)
+        return x
