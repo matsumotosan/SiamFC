@@ -20,7 +20,8 @@ def main(cfg):
     encoder, preprocess = load_pretrained_encoder(
         cfg.network.arch, 
         cfg.network.pretrained,
-        device)
+        device
+    )
 
     # Initialize SiamFC network
     siamese_net = SiamFCNet(

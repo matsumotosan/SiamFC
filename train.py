@@ -36,6 +36,9 @@ def main(cfg):
         init_weights=True
     )
     
+    # Load from last checkpoint (if available)
+    # siamfc_model.load_from_checkpoint()
+    
     # Define transforms
     transforms = SiamFCTransforms()
     
@@ -104,11 +107,21 @@ def main(cfg):
         val_dataloaders=val_dataloader
     )
     
+    trainer.test(
+        model=siamfc_model,
+        test_dataloaders=test_dataloader
+    )
+    
     # trainer.fit(
     #     model=siamfc_model,
     #     datamodule=got10k_dm
     # )
-
+    
+    # Save model
+    torch.save(
+        siamfc_model.encoder.state_dict(),
+        cfg.network.trained_model_path
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
