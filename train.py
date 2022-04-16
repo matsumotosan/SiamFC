@@ -32,7 +32,8 @@ def main(cfg):
         initial_lr=cfg.hparams.initial_lr,
         ultimate_lr=cfg.hparams.ultimate_lr,
         weight_decay=cfg.hparams.weight_decay,
-        loss=bce_loss_balanced
+        loss=bce_loss_balanced,
+        init_weights=True
     )
     
     # Define transforms
@@ -100,8 +101,7 @@ def main(cfg):
     trainer.fit(
         model=siamfc_model,
         train_dataloaders=train_dataloader,
-        val_dataloaders=val_dataloader,
-        test_dataloaders=test_dataloader
+        val_dataloaders=val_dataloader
     )
     
     # trainer.fit(
