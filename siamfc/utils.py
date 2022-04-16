@@ -77,19 +77,34 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
 
 
 def read_image(img_file, cvt_code=cv.COLOR_BGR2RGB):
+    """Read image and optionally convert color space.
+    
+    Parameters
+    ----------
+    img_file : str
+        Path to image
+    
+    cvt_code : int, default=cv.COLOR_BGR2RGB (=4)
+        Desired color space code
+        
+    Returns
+    -------
+    img :
+        Image (color space conversion if specified)
+    """
     img = cv.imread(img_file, cv.IMREAD_COLOR)
     if cvt_code is not None:
         img = cv.cvtColor(img, cvt_code)
     return img
 
 
-def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
-               thickness=3, fig_n=1, delay=1, visualize=True,
-               cvt_code=cv.COLOR_RGB2BGR):
+def show_image(img, boxes=None, response_map=None, box_fmt='ltwh', colors=None,
+               thickness=3, fig_n=1, delay=1, cvt_code=cv.COLOR_RGB2BGR):
+    # Color conversion
     if cvt_code is not None:
         img = cv.cvtColor(img, cvt_code)
     
-    # resize img if necessary
+    # Resize image if too large
     max_size = 960
     if max(img.shape[:2]) > max_size:
         scale = max_size / max(img.shape[:2])
@@ -101,6 +116,7 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
             boxes = np.array(boxes, dtype=np.float32) * scale
     
     if boxes is not None:
+        # Check box format
         assert box_fmt in ['ltwh', 'ltrb']
         boxes = np.array(boxes, dtype=np.int32)
         if boxes.ndim == 1:
@@ -108,11 +124,12 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
         if box_fmt == 'ltrb':
             boxes[:, 2:] -= boxes[:, :2]
         
-        # clip bounding boxes
+        # Clip boxes if out of frame
         bound = np.array(img.shape[1::-1])[None, :]
         boxes[:, :2] = np.clip(boxes[:, :2], 0, bound)
         boxes[:, 2:] = np.clip(boxes[:, 2:], 0, bound - boxes[:, :2])
         
+        # Set color for each box
         if colors is None:
             colors = [
                 (0, 0, 255),
@@ -130,17 +147,23 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
         colors = np.array(colors, dtype=np.int32)
         if colors.ndim == 1:
             colors = np.expand_dims(colors, axis=0)
-        
+       
+        # Draw each box
         for i, box in enumerate(boxes):
             color = colors[i % len(colors)]
-            pt1 = (box[0], box[1])
-            pt2 = (box[0] + box[2], box[1] + box[3])
-            img = cv.rectangle(img, pt1, pt2, color.tolist(), thickness)
+            top_left = (box[0], box[1])
+            bot_right = (box[0] + box[2], box[1] + box[3])
+            img = cv.rectangle(img, top_left, bot_right, color.tolist(), thickness)
     
-    if visualize:
-        winname = 'window_{}'.format(fig_n)
-        cv.imshow(winname, img)
-        cv.waitKey(delay)
+    # Concatenate response map
+    if response_map is not None:
+        response_map = cv.resize(response_map, out_size)
+        img = np.concatenate((img, response_map), axis=1)
+    
+    # Display image
+    win_name = 'window_{}'.format(fig_n)
+    cv.imshow(win_name, img)
+    cv.waitKey(delay)
 
     return img
 
@@ -271,6 +294,27 @@ def crop_and_resize(img, center, size, out_size,
 
     
 def load_pretrained_encoder(arch, pretrained, device):
+    """Load pretrained encoder.
+    
+    Parameters
+    ----------
+    arch : str
+        Encoder architecture
+    
+    pretrained : str
+        Path to pretrained weights
+        
+    device : torch.device
+        Device to load to
+        
+    Returns
+    -------
+    encoder : nn.Module
+        Pretrained encoder
+    
+    preprocess : bool
+        Flag specifying need for preprocessing of data during inference
+    """
     if arch == 'alexnet':
         encoder = AlexNet()
         encoder.load_pretrained(file=pretrained)

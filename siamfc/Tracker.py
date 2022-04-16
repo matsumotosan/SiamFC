@@ -86,6 +86,7 @@ class SiamFCTracker:
         boxes = np.zeros((n_frames, 4))
         boxes[0] = box
         t = np.zeros(n_frames)
+        response = None
         
         # Iterate through each frame
         for frame, img_file in enumerate(img_files):
@@ -94,11 +95,11 @@ class SiamFCTracker:
             if frame == 0:
                 self.init(img, boxes[0])
             else:
-                boxes[frame, :] = self.update(img)
+                boxes[frame, :], response = self.update(img)
                 
             t[frame] = time.time() - t0
             if visualize:
-                show_image(img, boxes[frame, :])
+                show_image(img, boxes[frame, :], response_map=response)
                 
         return boxes, t
     
@@ -238,4 +239,4 @@ class SiamFCTracker:
             self.center[0] + 1 - (self.target_sz[0] - 1) / 2,
             self.target_sz[1], self.target_sz[0]])
         
-        return box
+        return box, response
