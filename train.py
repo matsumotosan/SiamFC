@@ -11,7 +11,6 @@ from models import *
 
 
 def main(cfg):
-    # accelerator = ('gpu' if torch.cuda.is_available() else 'cpu')
     torch.set_default_dtype(torch.float32)
     
     # Initialize encoder
@@ -95,14 +94,14 @@ def main(cfg):
         accelerator="auto",
         devices="auto",
         logger=logger
-    )
+    ) 
 
     # Train model
     trainer.fit(
         model=siamfc_model,
         train_dataloaders=train_dataloader,
         val_dataloaders=val_dataloader,
-        # test_dataloaders=test_dataloader
+        test_dataloaders=test_dataloader
     )
     
     # trainer.fit(

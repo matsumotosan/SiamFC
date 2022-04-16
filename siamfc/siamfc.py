@@ -11,17 +11,16 @@ from .utils import create_labels
 class SiamFCNet(pl.LightningModule):
     def __init__(
         self, 
-        encoder=None,
-        epoch_num=None, 
-        batch_size=None, 
-        initial_lr=None,
-        ultimate_lr=None,
-        weight_decay=1e-4,
-        loss=None, 
-        output_scale=0.001, 
-        pretrained=False,
+        encoder,
+        loss,
+        epoch_num=50,
+        batch_size=8,
+        initial_lr=1e-2,
+        ultimate_lr=1e-5,
+        weight_decay=5e-4, 
+        output_scale=0.001,
         preprocess=False,
-        init_weights=True
+        init_weights=False
         ):
         """Fully-convolutional Siamese architecture (SiamFC).
          
@@ -33,14 +32,14 @@ class SiamFCNet(pl.LightningModule):
         encoder : nn.Module
             Encoding network to embed exemplar and search images
         
+        loss : 
+            Loss function
+        
         batch_size : int
             Batch size
         
         lr : float
             Learning rate
-         
-        loss : 
-            Loss function
         
         output_scale : float, default=0.01
             Output scaling factor for response maps
@@ -51,17 +50,16 @@ class SiamFCNet(pl.LightningModule):
         super().__init__()
         self.preprocess = preprocess
         self.normalize = torch.nn.Sequential(
-            transforms.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225])
+            transforms.Normalize(
+                [0.485, 0.456, 0.406],
+                [0.229, 0.224, 0.225])
             )
-        
-        self.cuda = torch.cuda.is_available()
         self.encoder = encoder
         self.batch_size = batch_size
         self.initial_lr = initial_lr
         self.ultimate_lr = ultimate_lr
         self.weight_decay = weight_decay
         self.epoch_num = epoch_num
-        self.gamma = np.power(self.ultimate_lr/self.initial_lr,1/self.epoch_num)
         self.loss = loss
         if init_weights == True:
             self._init_weights()
@@ -109,11 +107,25 @@ class SiamFCNet(pl.LightningModule):
         # result.log('avg_val_loss', loss)
         return {"val_loss": loss}
 
-    def configure_optimizers(self): 
+    def configure_optimizers(self, optimizer='sgd'): 
         """Returns optimizer for model."""
-        optimizer = torch.optim.Adam(self.encoder.parameters(), lr=self.initial_lr, weight_decay=self.weight_decay)
-        schedular = ExponentialLR(optimizer,self.gamma)
-        return [optimizer], [schedular]
+        if optimizer == 'adam':
+            optimizer = torch.optim.Adam(
+                self.encoder.parameters(), 
+                lr=self.initial_lr, 
+                weight_decay=self.weight_decay)
+        elif optimizer == 'sgd':
+            optimizer = torch.optim.SGD(
+                self.encoder.parameters(),
+                lr=self.initial_lr,
+                weight_decay=self.weight_decay)
+        
+        gamma = np.power(self.ultimate_lr / self.initial_lr, 1 / self.epoch_num)
+        scheduler = ExponentialLR(
+            optimizer,
+            gamma)
+        
+        return [optimizer], [scheduler]
 
     def _init_weights(self) -> None:
         """Initialize weights of encoder network."""
