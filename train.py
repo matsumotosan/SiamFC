@@ -58,10 +58,6 @@ def main(cfg):
         init_weights=True
     )
     
-    # Load from last checkpoint (if available)
-    if cfg.network.ckpt_path:
-        siamfc_model.load_from_checkpoint(cfg.ckpt_path)
-    
     # Define transforms
     transforms = SiamFCTransforms()
     
@@ -118,7 +114,8 @@ def main(cfg):
     trainer.fit(
         model=siamfc_model,
         train_dataloaders=train_dataloader,
-        val_dataloaders=val_dataloader
+        val_dataloaders=val_dataloader,
+        ckpt_path=cfg.network.ckpt_path
     )
     
     # Test model

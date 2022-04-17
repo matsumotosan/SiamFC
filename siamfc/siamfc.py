@@ -108,6 +108,13 @@ class SiamFCNet(pl.LightningModule):
         # result.log('avg_val_loss', loss)
         return {"val_loss": loss}
 
+    def test_step(self, batch, batch_idx):
+        """Returns loss for test step."""
+        loss, center_error = self._shared_step(batch, batch_idx)
+        self.log("test_loss", loss)
+        self.log("center_error", center_error)
+        return {"test_loss", loss}
+
     def configure_optimizers(self, optimizer='sgd'): 
         """Returns optimizer for model."""
         if optimizer == 'adam':
@@ -122,10 +129,7 @@ class SiamFCNet(pl.LightningModule):
                 weight_decay=self.weight_decay)
         
         gamma = np.power(self.ultimate_lr / self.initial_lr, 1 / self.epoch_num)
-        scheduler = ExponentialLR(
-            optimizer,
-            gamma)
-        
+        scheduler = ExponentialLR(optimizer, gamma)
         return [optimizer], [scheduler]
 
     def _init_weights(self) -> None:
@@ -171,7 +175,6 @@ class SiamFCNet(pl.LightningModule):
         
         # Calculate loss (BCE or triplet)
         loss = self.loss(responses, self.labels)
-        
         return loss, center_error
     
     def _xcorr(self, hz, hx):
