@@ -89,11 +89,11 @@ class SiamFCNet(pl.LightningModule):
         search_embedded = self.encoder(x)
         return self._xcorr(exemplar_embedded, search_embedded) * self.output_scale    
 
-    def training_step(self, batch, batch_idx): #What does batch_nb mean?
+    def training_step(self, batch, batch_idx):
         """Returns and logs loss for training step."""
         loss, center_error = self._shared_step(batch, batch_idx)
         self.log("train_loss", loss)
-        self.log('center_error',center_error)
+        self.log("center_error", center_error)
         # result = pl.TrainResult(minimize=loss, on_epoch=True)
         # result.log('train_loss', loss, on_epoch=True)
         return {"loss": loss}
@@ -101,8 +101,8 @@ class SiamFCNet(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         """Returns loss for validation step."""
         loss, center_error = self._shared_step(batch, batch_idx)
-        self.log('val_loss',loss)
-        self.log('center_error',center_error)
+        self.log("val_loss", loss)
+        self.log("center_error", center_error)
         # result = pl.EvalResult(checkpoint_on=loss)
         # result.log('avg_val_loss', loss)
         return {"val_loss": loss}

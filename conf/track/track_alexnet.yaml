@@ -1,7 +1,8 @@
 # Default configurations
 network:
   arch: alexnet
-  pretrained: pretrained/siamfc_alexnet_e50.pth
+  pretrained: pretrained/third-party/siamfc_alexnet_e50.pth
+  # pretrained: pretrained/checkpoints/alexnet/epoch=49-step=58300.ckpt
 hparams:
   batch_size: 8
   epoch_num: 50
