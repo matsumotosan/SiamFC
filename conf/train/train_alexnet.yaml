@@ -1,6 +1,6 @@
 network:
   arch: alexnet
-  pretrained: pretrained/siamfc_alexnet_e50.pth
+  ckpt_path: logs
   trained_model_path: pretrained/alexnet/pretrained_alexnet_e50.pth
 hparams:
   batch_size: 8

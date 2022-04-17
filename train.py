@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
 from omegaconf import OmegaConf
 from got10k.datasets import GOT10k
 from siamfc import *
@@ -19,10 +20,6 @@ def main(cfg):
         # encoder = AlexNet_torch()
     # elif cfg.network.arch == 'random_walk':
     #     encoder = ResNet()
-    
-    # Load pretrained weights (if available)
-    # if cfg.network.pretrained:
-        # encoder.load_pretrained(cfg.network.pretrained)
     
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
@@ -86,15 +83,34 @@ def main(cfg):
             batch_size=cfg.hparams.batch_size
         )
 
+    # Setup logger
     logger = TensorBoardLogger(
-        save_dir="tb_logs",
+        save_dir="logs",
         name=cfg.network.arch
     ) 
 
+    # Setup checkpoint (improvement in validation loss)
+    val_checkpoint = ModelCheckpoint(
+        filename="{epoch}-{step}-{val_losss:.1f}",
+        monitor="val_loss",
+        mode="min",
+        save_top_k=-1
+    )
+    
+    # Setup checkpoint (latest checkpoint)
+    latest_checkpoint = ModelCheckpoint(
+        filename="latest-{epoch}-{step}",
+        monitor="step",
+        mode="max",
+        every_n_train_steps=500,
+        save_top_k=1
+    )
+    
     # Initialize trainer
     trainer = pl.Trainer(
         min_epochs=cfg.hparams.epoch_num,
         max_epochs=cfg.hparams.epoch_num,
+        callbacks=[val_checkpoint, latest_checkpoint],
         accelerator="auto",
         devices="auto",
         logger=logger
@@ -107,6 +123,7 @@ def main(cfg):
         val_dataloaders=val_dataloader
     )
     
+    # Test model
     trainer.test(
         model=siamfc_model,
         test_dataloaders=test_dataloader
@@ -117,11 +134,12 @@ def main(cfg):
     #     datamodule=got10k_dm
     # )
     
-    # Save model
+    # Save encoder weights
     torch.save(
         siamfc_model.encoder.state_dict(),
         cfg.network.trained_model_path
     )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
