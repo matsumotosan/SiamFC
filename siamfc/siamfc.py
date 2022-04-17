@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import numpy as np
 from torchvision import transforms
 from .utils import create_labels
+from .metrics import calc_center_error
 
 
 class SiamFCNet(pl.LightningModule):
@@ -87,7 +88,7 @@ class SiamFCNet(pl.LightningModule):
         """
         exemplar_embedded = self.encoder(z)
         search_embedded = self.encoder(x)
-        return self._xcorr(exemplar_embedded, search_embedded) * self.output_scale    
+        return self._xcorr(exemplar_embedded, search_embedded) * self.output_scale
 
     def training_step(self, batch, batch_idx):
         """Returns and logs loss for training step."""
@@ -144,20 +145,19 @@ class SiamFCNet(pl.LightningModule):
 
     def _shared_step(self, batch, batch_idx):
         """Returns loss for pass through model with provided batch."""
-        # Encode exemplar and search images
         (z, x) = batch
-        # if self.preprocess == True:
-        #     z = z/255
-        #     x = x/255
-        #     z = self.normalize(z)
-        #     x = self.normalize(x)
-        hz = self.encoder(z)
-        hx = self.encoder(x)
+        if self.preprocess == True:
+            z /= 255
+            x /= 255
+            z = self.normalize(z)
+            x = self.normalize(x)
         
-        # Calculate cross-correlation response map
-        responses = self._xcorr(hz, hx) * self.output_scale
+        # Calculate response map
+        responses = self.forward(z, x)
         responses_np = responses.detach().cpu().numpy()
-        center_error = self.center_error(responses_np,self.total_stride)
+        
+        # Calculate center error
+        center_error = calc_center_error(responses_np, self.total_stride)
         
         # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
@@ -169,7 +169,7 @@ class SiamFCNet(pl.LightningModule):
             )
             self.labels = torch.from_numpy(labels).to(self.device).float()
         
-        # Calculate loss
+        # Calculate loss (BCE or triplet)
         loss = self.loss(responses, self.labels)
         
         return loss, center_error
@@ -177,30 +177,7 @@ class SiamFCNet(pl.LightningModule):
     def _xcorr(self, hz, hx):
         nz = hz.size(0)
         nx, c, h, w = hx.size()
-        hx = hx.view(-1,nz*c,h,w)
-        out = F.conv2d(hx,hz,groups=nz)
-        out = out.view(nx,-1,out.size(-2),out.size(-1))
+        hx = hx.view(-1, nz * c, h, w)
+        out = F.conv2d(hx, hz, groups=nz)
+        out = out.view(nx, -1, out.size(-2), out.size(-1))
         return out
-    
-    def center_error(self, output, upscale_factor):
-        """This metric measures the displacement between the estimated center of the target and the ground-truth 
-        
-        Args:
-            output: (np.ndarray) The output of the network with dimension [Bx1xHxW]
-            upscale_factor: (int) Indicates how much we must upscale the output feature map to match it to he input images
-        
-        Returns:
-            c_error:(int) The center displacement in pixels
-        """
-        b = output.shape[0]
-        s = output.shape[-1]
-        out_flat = output.reshape(b,-1)
-        max_idx = np.argmax(out_flat,axis=1)
-        estim_center = np.stack([max_idx//s, max_idx%s],axis=1)
-        dist = np.linalg.norm(estim_center-s//2,axis=1)
-        c_error = dist.mean()
-        c_error = c_error*upscale_factor
-        return c_error
-    
-        
-        

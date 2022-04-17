@@ -11,6 +11,31 @@ from siamfc import *
 from models import *
 
 
+def setup_checkpoints():
+    val_checkpoint = ModelCheckpoint(
+        filename="{epoch}-{step}-{val_losss:.1f}",
+        monitor="val_loss",
+        mode="min",
+        save_top_k=-1
+    )
+    latest_checkpoint = ModelCheckpoint(
+        filename="latest-{epoch}-{step}",
+        monitor="step",
+        mode="max",
+        every_n_train_steps=500,
+        save_top_k=1
+    )
+    return [val_checkpoint, latest_checkpoint]
+
+
+def setup_logger(save_dir="logs", name=None):
+    logger = TensorBoardLogger(
+        save_dir=save_dir,
+        name=name
+    )
+    return logger
+    
+
 def main(cfg):
     torch.set_default_dtype(torch.float32)
     
@@ -34,7 +59,8 @@ def main(cfg):
     )
     
     # Load from last checkpoint (if available)
-    # siamfc_model.load_from_checkpoint()
+    if cfg.network.ckpt_path:
+        siamfc_model.load_from_checkpoint(cfg.ckpt_path)
     
     # Define transforms
     transforms = SiamFCTransforms()
@@ -44,8 +70,8 @@ def main(cfg):
         # got10k_dm = GOT10kDataModule()
         
         # Training
-        seqs = GOT10k(root_dir=cfg.data.root_dir, subset='train')
-        train_dataset = Pair(seqs=seqs, transforms=transforms)
+        train_seqs = GOT10k(root_dir=cfg.data.root_dir, subset='train')
+        train_dataset = Pair(seqs=train_seqs, transforms=transforms)
         train_dataloader = DataLoader(
             train_dataset, 
             batch_size=cfg.hparams.batch_size, 
@@ -75,42 +101,14 @@ def main(cfg):
             drop_last=True,
             num_workers=6
         )
-        
-    elif cfg.data.name == "imagenet":    
-        imagenet = ImageNetDataModule(
-            data_dir=cfg.data.root_dir,
-            transform=transforms,
-            batch_size=cfg.hparams.batch_size
-        )
-
-    # Setup logger
-    logger = TensorBoardLogger(
-        save_dir="logs",
-        name=cfg.network.arch
-    ) 
-
-    # Setup checkpoint (improvement in validation loss)
-    val_checkpoint = ModelCheckpoint(
-        filename="{epoch}-{step}-{val_losss:.1f}",
-        monitor="val_loss",
-        mode="min",
-        save_top_k=-1
-    )
     
-    # Setup checkpoint (latest checkpoint)
-    latest_checkpoint = ModelCheckpoint(
-        filename="latest-{epoch}-{step}",
-        monitor="step",
-        mode="max",
-        every_n_train_steps=500,
-        save_top_k=1
-    )
-    
-    # Initialize trainer
+    # Initialize trainer with logger and custom checkpoints
+    logger = setup_logger("logs", cfg.network.arch)
+    checkpoints = setup_checkpoints()
     trainer = pl.Trainer(
         min_epochs=cfg.hparams.epoch_num,
         max_epochs=cfg.hparams.epoch_num,
-        callbacks=[val_checkpoint, latest_checkpoint],
+        callbacks=checkpoints,
         accelerator="auto",
         devices="auto",
         logger=logger
@@ -126,13 +124,8 @@ def main(cfg):
     # Test model
     trainer.test(
         model=siamfc_model,
-        test_dataloaders=test_dataloader
+        dataloaders=test_dataloader
     )
-    
-    # trainer.fit(
-    #     model=siamfc_model,
-    #     datamodule=got10k_dm
-    # )
     
     # Save encoder weights
     torch.save(
