@@ -13,7 +13,7 @@ from models import *
 
 def setup_checkpoints():
     val_checkpoint = ModelCheckpoint(
-        filename="{epoch}-{step}-{val_losss:.1f}",
+        filename="{epoch}-{step}-{val_loss:.1f}",
         monitor="val_loss",
         mode="min",
         save_top_k=-1
@@ -119,10 +119,10 @@ def main(cfg):
     )
     
     # Test model
-    trainer.test(
-        model=siamfc_model,
-        dataloaders=test_dataloader
-    )
+    # trainer.test(
+    #     model=siamfc_model,
+    #     dataloaders=test_dataloader
+    # )
     
     # Save encoder weights
     torch.save(

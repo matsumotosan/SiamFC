@@ -1,14 +1,13 @@
 # Default configurations
 network:
   arch: alexnet
-  pretrained: pretrained/third-party/siamfc_alexnet_e50.pth
-  # pretrained: pretrained/checkpoints/alexnet/epoch=49-step=58300.ckpt
+  pretrained: pretrained/alexnet/pretrained_alexnet_e50.pth
 hparams:
   batch_size: 8
   epoch_num: 50
   initial_lr: 1e-2
   ultimate_lr: 1e-5
-data_dir: data/GOT-10k/train/GOT-10k_Train_000001/
+data_dir: data/GOT-10k/test/GOT-10k_Test_000150/
 # data_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001/'
 tracker:
   response_up: 16
