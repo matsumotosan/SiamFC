@@ -2,8 +2,6 @@ import cv2 as cv
 import numpy as np
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader, random_split
-from torchvision import transforms
-from torchvision.datasets import ImageFolder
 from typing import Optional
 from got10k.datasets import GOT10k
 from .transforms import SiamFCTransforms
@@ -12,27 +10,27 @@ from .transforms import SiamFCTransforms
 class GOT10kDataModule(pl.LightningDataModule):
     """PyTorch Lightning DataModule class for GOT-10k dataset."""
     def __init__(self, data_dir='./data/GOT-10k', batch_size=8) -> None:
-        super.__init_()
+        super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
     
     def prepare_data(self) -> None:
-        """Download data"""
+        """Download and prepare data."""
         pass
     
-    def setup(self) -> None:
+    def setup(self, stage: Optional[str] = None) -> None:
         """Define transforms and data splits."""
-        # Training data
-        train_seqs = GOT10k(root_dir=self.data_dir, subset='train')
-        self.got10k_train = Pair(seqs=train_seqs, transforms=SiamFCTransforms)
-        
-        # Validation data
-        val_seqs = GOT10k(root_dir=self.data_dir, subset='val')
-        self.got10k_val = Pair(seqs=val_seqs, transforms=SiamFCTransforms)
+        # Training and validation data
+        if stage == "fit" or stage is None:
+            train_seqs = GOT10k(root_dir=self.data_dir, subset='train')
+            val_seqs = GOT10k(root_dir=self.data_dir, subset='val')
+            self.got10k_train = Pair(seqs=train_seqs, transforms=SiamFCTransforms)
+            self.got10k_val = Pair(seqs=val_seqs, transforms=SiamFCTransforms)
         
         # Test data
-        test_seqs = GOT10k(root_dir=self.data_dir, subset='test')
-        self.got10k_test = Pair(seqs=test_seqs, transforms=SiamFCTransforms)
+        if stage == "test" or stage is None:
+            test_seqs = GOT10k(root_dir=self.data_dir, subset='test')
+            self.got10k_test = Pair(seqs=test_seqs, transforms=SiamFCTransforms)
 
     def train_dataloader(self) -> DataLoader:
         """Return training dataloader."""
@@ -111,11 +109,10 @@ class Pair(Dataset):
         self.indices = indices[indices != 331] # We need to avoid the 332th video sequence because it's corrupted
         self.return_meta = getattr(seqs, 'return_meta', False)
     
-    def  __getitem__(self, index):
+    def __getitem__(self, index):
         # Get image filenames and annotations for video
         index = self.indices[index % len(self.indices)]
         img_files, anno  = self.seqs[index]
-        # img_files, anno, _meta  = self.seqs[index]
         frame_indices = list(range(len(img_files)))
         
         # Select frame indices (ensure within maximum separation of number of frames)
@@ -133,7 +130,7 @@ class Pair(Dataset):
         
         # Perform image transforms on exemplar and target images
         item = (z, x, box_z, box_x)
-        if self.transforms:
+        if self.transforms is not None:
             z, x = self.transforms(*item)
 
         return z, x
