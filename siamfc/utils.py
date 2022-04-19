@@ -156,9 +156,9 @@ def show_image(img, boxes=None, response_map=None, box_fmt='ltwh', colors=None,
             img = cv.rectangle(img, top_left, bot_right, color.tolist(), thickness)
     
     # Concatenate response map
-    if response_map is not None:
-        response_map = cv.resize(response_map, out_size)
-        img = np.concatenate((img, response_map), axis=1)
+    # if response_map is not None:
+    #     response_map = cv.resize(response_map, out_size)
+    #     img = np.concatenate((img, response_map), axis=1)
     
     # Display image
     win_name = 'window_{}'.format(fig_n)
@@ -229,31 +229,32 @@ def show_frame(image, boxes=None, fig_n=1, pause=0.001,
     plt.draw()
 
 
-def crop_and_resize(img, center, size, out_size,
+def crop_and_resize(img, center, in_size, out_size,
                     border_type=cv.BORDER_CONSTANT,
                     border_value=(0, 0, 0),
                     interp=cv.INTER_LINEAR):
-    """Crop and resize image patch.
+    """Returns cropped and resized centered image.
     
     Parameters
     ----------
-    img : ndarray of shape (size, size)
+    img : ndarray of shape (H, W, 3)
         Original image
     
     center : ndarray of shape (2,)
-        Center of patch to be extracted
-    
-    size : int
-        Size of patch to be extracted
+        Center of bounding box (y, x)
+        Coordinates with respect to top left of image
+        
+    in_size : int
+        Size of input exemplar image
         
     out_size : int
-        Size of resized patch
+        Size of ouput exemplar image
         
     border_type : default=cv.BORDER_CONSTANT
         Type of border when adding padding to image
     
     border_value : ndarray of shape (3,)
-        Value to be used for border
+        Value to be used for border padding
     
     interp : default=cv.INTER_LINEAR
         Interpolation method to be used in resizing. 
@@ -264,28 +265,26 @@ def crop_and_resize(img, center, size, out_size,
     patch : ndarray of shape (out_size, out_size)
         Cropped and resized image patch
     """
-    # Calculate coordinates of corners (0-indexed)
-    size = np.round(size)
-    corners = np.concatenate((
-        np.round(center - (size - 1) / 2),
-        np.round(center - (size - 1) / 2) + size)).astype(int)
+    # Calculate coordinates of corners of exemplar image in reference to original image
+    in_size = np.round(in_size)
+    top_left = np.round(center - (in_size - 1) / 2)
+    corners = np.concatenate((top_left, top_left + in_size)).astype(int)
 
-    # Pad image (if necessary)
+    # Corners of patch
     pads = np.concatenate((
-        -corners[:2], corners[2:] - img.shape[:2]))
+        -corners[:2], 
+        corners[2:] - img.shape[:2])
+    )
+    
+    # Add padding (if necessary)
     npad = max(0, int(pads.max()))
     if npad > 0:
-        img = cv.copyMakeBorder(
-            img, npad, npad, npad, npad,
-            border_type, value=border_value)
+        img = cv.copyMakeBorder(img, npad, npad, npad, npad, border_type, value=border_value)
+        corners += npad
 
-    # Crop image patch
-    corners = (corners + npad).astype(int)
-    patch = img[corners[0]:corners[2], corners[1]:corners[3]]
-
-    # Resize to out_size
+    # Crop image patch and resize
     patch = cv.resize(
-        patch, 
+        img[corners[0]:corners[2], corners[1]:corners[3]], 
         (out_size, out_size),
         interpolation=interp
     )

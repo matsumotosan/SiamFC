@@ -24,20 +24,21 @@ class SiamFCTracker:
         self.cfg = self.parse_args(**kwargs)
         
     def parse_args(self, **kwargs):
-        # default parameters
+        # Default parameters
         cfg = {
             'exemplar_sz': 127,
             'instance_sz': 255,
-            'context': 0.5,
-            'scale_num': 3, #5
-            'scale_step': 1.0375, #1.025,
-            'scale_lr': 0.59, #0.35,
-            'scale_penalty': 0.9745,
-            'window_influence': 0.176,
             'response_sz': 17,
-            'response_up': 16,
+            'upsample_factor': 16,
+            'context': 0.5,
+            'scale_num': 3,
+            'scale_step': 1.025,
+            'scale_lr': 0.35,
+            'scale_penalty': 0.975,
+            'window_influence': 0.176,
         }
         
+        # Update parameters
         for key, val in kwargs.items():
             if key in cfg:
                 cfg.update({key: val})
@@ -106,48 +107,44 @@ class SiamFCTracker:
         """
         # Convert box format to be 0-indexed and center based [y, x, h, w]
         if box_style == 'ltwh':
-            box = np.array([
-                box[1] + (box[3] - 1) / 2 - 1,
-                box[0] + (box[2] - 1) / 2 - 1,
-                box[3], box[2]],
-                dtype=np.float32)
-            self.center, self.target_sz = box[:2], box[2:]
+            box = self._ltwh2yxhw(box)
+            self.box_center = box[:2]
+            self.box_sz = box[2:]
         
         # Calculate size of upsampled response map
-        self.upsample_sz = self.cfg.response_up * self.cfg.response_sz
+        self.upsample_sz = self.cfg.upsample_factor * self.cfg.response_sz
         
         # Create hanning window to regularize response map
-        self.hanning_window = np.outer(
-            np.hanning(self.upsample_sz),
-            np.hanning(self.upsample_sz))
-        self.hanning_window /= self.hanning_window.sum()
+        self._create_hanning_window()
         
-        # Search scale factors
-        self.scale_factors = self.cfg.scale_step ** np.linspace(
-            -(self.cfg.scale_num // 2),
-          self.cfg.scale_num // 2, self.cfg.scale_num)
+        # Calculate scale factors
+        self._get_scale_factors()
         
-        # Exemplar and search sizes
-        margin = self.cfg.context * np.sum(self.target_sz)
-        self.z_sz = np.sqrt(np.prod(self.target_sz + margin))
+        # Calculate image scaling
+        p = self.cfg.context * np.mean(self.box_sz)
+        self.z_sz = np.sqrt(np.prod(self.box_sz + 2 * p))
         self.x_sz = self.z_sz * (self.cfg.instance_sz / self.cfg.exemplar_sz)
         
-        # Get exemplar image from the first frame
+        # Get exemplar image from first frame
         self.avg_color = np.mean(img, axis=(0, 1))
         z = crop_and_resize(
-            img, self.center, self.z_sz,
-            out_size = self.cfg.exemplar_sz,
-            border_value=self.avg_color)
-        #get the deep feature for the exemplar image
+            img, 
+            self.box_center, 
+            self.z_sz,
+            out_size=self.cfg.exemplar_sz,
+            border_value=self.avg_color
+        )
+        
+        # Get exemplar image embedding
         z = torch.from_numpy(z).to(self.device).permute(2,0,1).unsqueeze(0).float()
         if self.siamese_net.preprocess == True:
             z /= 255
             z = self.siamese_net.normalize(z)
-        self.kernel = self.siamese_net.encoder(z) #size: 1x1x17x17
+        self.kernel = self.siamese_net.encoder(z)
     
     @torch.no_grad()
     def update(self, img):
-        """Update tracker box given new frame.
+        """Update tracker given new frame.
         
         Parameters
         ----------
@@ -162,18 +159,19 @@ class SiamFCTracker:
         # Get search images at different scales
         x = [crop_and_resize(
                 img, 
-                self.center, 
-                self.x_sz * f,
+                self.box_center, 
+                in_size=self.x_sz * f,
                 out_size=self.cfg.instance_sz,
                 border_value=self.avg_color) 
             for f in self.scale_factors]
         x = np.stack(x, axis=0)
         x = torch.from_numpy(x).to(
             self.device).permute(0, 3, 1, 2).float()
-        if self.siamese_net.preprocess == True:
+        if self.siamese_net.preprocess:
             x /= 255
             x = self.siamese_net.normalize(x)
-        #compute deep features for x
+            
+        # Compute search image embedding
         x = self.siamese_net.encoder(x) 
        
         # Compute response map (scale_num, 1, 17, 17)
@@ -184,7 +182,7 @@ class SiamFCTracker:
         responses = np.stack([cv.resize(r, 
             (self.upsample_sz, self.upsample_sz),
             interpolation=cv.INTER_CUBIC)
-            for r in responses]) 
+            for r in responses])
         
         # Penalize scale change
         responses[:self.cfg.scale_num // 2] *= self.cfg.scale_penalty
@@ -206,23 +204,45 @@ class SiamFCTracker:
         # Locate target center
         disp_in_response = np.array(loc) - (self.upsample_sz - 1) / 2
         disp_in_instance = disp_in_response * \
-            self.siamese_net.total_stride / self.cfg.response_up
+            self.siamese_net.total_stride / self.cfg.upsample_factor
         disp_in_image = disp_in_instance * self.x_sz * \
             self.scale_factors[scale_id] / self.cfg.instance_sz
-        self.center += disp_in_image
+        self.box_center += disp_in_image
 
         # Update target size
         scale = (1 - self.cfg.scale_lr) * 1.0 + \
             self.cfg.scale_lr * self.scale_factors[scale_id]
             
-        self.target_sz *= scale
+        self.box_sz *= scale
         self.z_sz *= scale
         self.x_sz *= scale
         
         # Return 1-indexed and left-top based bounding box
         box = np.array([
-            self.center[1] + 1 - (self.target_sz[1] - 1) / 2,
-            self.center[0] + 1 - (self.target_sz[0] - 1) / 2,
-            self.target_sz[1], self.target_sz[0]])
+            self.box_center[1] + 1 - (self.box_sz[1] - 1) / 2,
+            self.box_center[0] + 1 - (self.box_sz[0] - 1) / 2,
+            self.box_sz[1], self.box_sz[0]])
         
         return box, response
+
+    def _ltwh2yxhw(self, box):
+        box = np.array([
+            box[1] + (box[3] - 1) / 2 - 1,
+            box[0] + (box[2] - 1) / 2 - 1,
+            box[3], box[2]],
+            dtype=np.float32)
+        return box
+    
+    def _create_hanning_window(self) -> None:
+        self.hanning_window = np.outer(
+            np.hanning(self.upsample_sz),
+            np.hanning(self.upsample_sz))
+        self.hanning_window /= self.hanning_window.sum()
+        
+    def _get_scale_factors(self):
+        powers = np.linspace(
+            -(self.cfg.scale_num // 2), 
+            self.cfg.scale_num // 2, 
+            self.cfg.scale_num
+        )
+        self.scale_factors = self.cfg.scale_step ** powers
