@@ -10,11 +10,11 @@ class SiamFCNet(LightningModule):
         super().__init__()
         self.embedding_net = embedding_net
         self.output_scale = output_scale
-    
+
     def init_weights(self) -> None:
         """Initialize weights of embedding network"""
         self.embedding_net.init_weights()
-    
+
     def forward(self, z, x):
         """Forward pass to calculate score map for search and target images."""
         target_embedded = self.embedding_net(z)
@@ -35,15 +35,15 @@ class SiamFCNet(LightningModule):
 
     def _xcorr(z, x):
         """Calculates cross-correlation between target and search embeddings.
-        
+
         Parameters
         ----------
         z : ndarray of shape ()
             Target embedding
-        
+
         x : ndarray of shape ()
             Search embedding
-        
+
         Returns
         -------
         score_map : ndarray of shape ()

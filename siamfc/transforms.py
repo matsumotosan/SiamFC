@@ -12,7 +12,7 @@ class Compose:
     """Class to compose multiple transforms into one."""
     def __init__(self, transforms):
         self.transforms = transforms
-    
+
     def __call__(self, img):
         for t in self.transforms:
             img = t(img)
@@ -23,7 +23,7 @@ class RandomStretch:
     """Randomly stretch an image"""
     def __init__(self, max_stretch: float = 0.05):
         self.max_stretch = max_stretch
-    
+
     def __call__(self, img):
         interp = np.random.choice([
             cv2.INTER_LINEAR,
@@ -46,7 +46,7 @@ class CenterCrop(object):
             self.size = (int(size), int(size))
         else:
             self.size = size
-    
+
     def __call__(self, img):
         h, w = img.shape[:2]
         tw, th = self.size
@@ -84,7 +84,7 @@ class RandomCrop:
             self.size = (int(size), int(size))
         else:
             self.size = size
-    
+
     def __call__(self, img):
         h, w = img.shape[:2]
         tw, th = self.size
@@ -104,7 +104,7 @@ class ToTensor:
 #         self.exemplar_sz = exemplar_sz
 #         self.instance_sz = instance_sz
 #         self.context = context
-        
+
 #         self.transform_instance = transforms.Compose([
 #             transforms.Resize(),
 #             transforms.CenterCrop(),
@@ -115,7 +115,7 @@ class ToTensor:
 #             transforms.CenterCrop(),
 #             transforms.ToTensor()
 #         ])
-    
+
 #     def __call__(self, z, x):
 #         z = self.transform_instance(z)
 #         x = self.transform_exemplar(x)
@@ -140,14 +140,14 @@ class SiamFCTransforms:
             CenterCrop(instance_sz),
             ToTensor()
         ])
-    
+
     def __call__(self, z, x, box_z, box_x):
         z = self._crop(z, box_z, self.instance_sz)
         x = self._crop(x, box_x, self.instance_sz)
         z = self.transform_z(z)
         x = self.transform_x(x)
         return z, x
-    
+
     def crop_and_resize(img, center, size, out_size,
                         border_type=cv2.BORDER_CONSTANT,
                         border_value=(0, 0, 0),
@@ -177,7 +177,7 @@ class SiamFCTransforms:
                        interpolation=interp)
 
         return patch
-    
+
     def _crop(self, img, box, out_size):
         # convert box to 0-indexed and center based [y, x, h, w].
         # Notice that the box given by GOT-10k has format ltwh(left, top, width, height)
@@ -201,9 +201,9 @@ class SiamFCTransforms:
         patch = crop_and_resize(
             img, center, size, out_size,
             border_value=avg_color, interp=interp)
-        
+
         return patch
-    
+
 
 def crop_and_resize(img, center, size, out_size,
                     border_type=cv2.BORDER_CONSTANT,
