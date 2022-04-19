@@ -2,12 +2,12 @@ import numpy as np
 
 
 def calc_center_error(output, upscale_factor):
-    """This metric measures the displacement between the estimated center of the target and the ground-truth 
-    
+    """This metric measures the displacement between the estimated center of the target and the ground-truth
+
     Args:
         output: (np.ndarray) The output of the network with dimension [Bx1xHxW]
         upscale_factor: (int) Indicates how much we must upscale the output feature map to match it to he input images
-    
+
     Returns:
         c_error:(int) The center displacement in pixels
     """
@@ -30,15 +30,15 @@ def threshold(score_map, labels, threshold):
 
 def mean_iou(score_map, labels):
     """Calculates mean IoU.
-    
+
     https://www.kaggle.com/iezepov/fast-iou-scoring-metric-in-pytorch-and-numpy
-    
+
     Parameters
     ----------
     score_map : array of size (N, H, W)
-    
+
     labels : array of size (N, H, W)
-    
+
     Returns
     -------
     mean_iou : array of size (N,)

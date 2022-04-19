@@ -37,7 +37,7 @@ def load_pretrained_encoder(arch, pretrained, device):
         preprocess = True
     else:
         raise ValueError('Invalid network architecture specified.')
-    
+
     return encoder, preprocess
 
 
@@ -61,25 +61,25 @@ def main(cfg):
         preprocess=preprocess,
         init_weights=False
     )
-    
+
     # ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_9/checkpoints/epoch=49-step=58300.ckpt')
     #ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_14/checkpoints/epoch=49-step=58300.ckpt')
     # siamese_net.load_state_dict(ckpt['state_dict'])
     #siamese_net = SiamFCNet.load_from_checkpoint('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
-    
+
     # Initialize tracker
     tracker = SiamFCTracker(
         siamese_net=siamese_net,
         **cfg.tracker
     )
-    
+
     # Get data (images and annotations)
     img_files = sorted(glob.glob(cfg.data_dir + '*.jpg'))
     anno = np.loadtxt(cfg.data_dir + 'groundtruth.txt', delimiter=',').reshape(-1, 4)
-     
+
     # Run tracker 
     tracker.track(img_files, anno[0], visualize=True)
-    
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -91,9 +91,9 @@ if __name__ == '__main__':
         default="./conf/track/track_alexnet.yaml",
         help="Path to tracking config file."
     )
-    
+
     args = parser.parse_args()
     with open(args.config_file) as f:
         cfg = OmegaConf.load(f)
-        
+
     main(cfg)

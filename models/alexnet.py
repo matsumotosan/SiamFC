@@ -5,10 +5,10 @@ from collections import OrderedDict
 
 class AlexNet(nn.Module):
     """AlexNet encoder architecture as specified by Bertinetto et al. (2016).
-    
+
     References
     ----------
-    Luca Bertinetto, Jack Valmadre, João F. Henriques, Andrea Vedaldi, and Philip H. S. Torr. 
+    Luca Bertinetto, Jack Valmadre, João F. Henriques, Andrea Vedaldi, and Philip H. S. Torr.
     Fully-Convolutional Siamese Networks for Object Tracking. 6 2016.
     """
     def __init__(self) -> None:
@@ -39,7 +39,7 @@ class AlexNet(nn.Module):
             nn.Conv2d(384, 256, 3, 1, groups=2)
         )
         self.total_stride = 8
-    
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
@@ -50,9 +50,9 @@ class AlexNet(nn.Module):
 
     def load_pretrained(self, file) -> None:
         """Load pretrained network for encoder
-        
+
         Weights are from https://github.com/huanglianghua/siamfc-pytorch.
-        
+
         Parameters
         ----------
         file : str
@@ -60,13 +60,13 @@ class AlexNet(nn.Module):
         """
         # Load state_dict
         state_dict = torch.load(file, map_location=torch.device('cpu'))
-       
+
         # Rename state_dict keys to match our model
         new_state_dict = OrderedDict() 
         for (k, v) in state_dict.items():
             new_k = k[9:]
             new_state_dict[new_k] = v
-        
+
         # Load weights using new state_dict
         self.load_state_dict(new_state_dict)
 
@@ -76,7 +76,7 @@ class AlexNet_torch(nn.Module):
         super(AlexNet_torch,self).__init__()
         self.model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=pretrained)
         self.total_stride = 8
-            
+
     def modify(self,padding=''):
         #remove the average pooling layer and the classifier
         remove_layers = ['avgpool','classifier']
@@ -96,7 +96,7 @@ class AlexNet_torch(nn.Module):
             for m in self.model.modules():
                 if isinstance(m, torch.nn.Conv2d) and sum(m.padding) > 0:
                     m.padding = (0,0)
-        
+
     def forward(self, x):
         for i in range(11):
             x = self.model.features[i](x)
