@@ -45,7 +45,7 @@ class SiamFCTracker:
                 cfg.update({key: val})
         return namedtuple('Config', cfg.keys())(**cfg)
     
-    def track(self, img_files, box, visualize=False):
+    def track(self, img_files, box, visualize=False, vid_name=""):
         """Track given set of frames given initial box. Optionally visualize tracking.
         
         Parameters
@@ -75,7 +75,7 @@ class SiamFCTracker:
         boxes[0] = box
         t = np.zeros(n_frames)
         score_map = None
-        
+
         # Track object for each frame
         # Stores bounding boxes in 'ltwh' format
         for frame, img_file in enumerate(img_files):
@@ -85,11 +85,16 @@ class SiamFCTracker:
                 self.init(img, boxes[0])
             else:
                 boxes[frame, :], score_map = self.update(img)
-                
+
             t[frame] = time.time() - t0
             if visualize:
-                show_image(img, boxes[frame, :], score_map=score_map)
-                
+                show_image(
+                    img, 
+                    boxes[frame, :], 
+                    score_map=None,
+                    window_title=f"{vid_name}Frame {frame}/{n_frames}"
+                )
+
         return boxes, t
     
     @torch.no_grad()

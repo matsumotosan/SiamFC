@@ -68,7 +68,6 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     # Reshape to match size of score map
     labels = labels.reshape((1, 1, h, w))
     labels = np.tile(labels, (n, c, 1, 1))
-    
     return labels
 
 
@@ -94,12 +93,22 @@ def read_image(img_file, cvt_code=cv.COLOR_BGR2RGB):
     return img
 
 
-def show_image(img, box, score_map=None, box_fmt='ltwh', color=(0, 0, 255),
-               thickness=3, max_size=960, fig_n=1, delay=1, cvt_code=cv.COLOR_RGB2BGR):
+def show_image(
+    img,
+    box,
+    box_fmt='ltwh',
+    box_color=(0, 0, 255),
+    box_thickness=3, 
+    score_map=None,
+    max_size=960, 
+    window_title="", 
+    delay=1, 
+    cvt_code=cv.COLOR_RGB2BGR
+    ):
     # Color conversion
     if cvt_code is not None:
         img = cv.cvtColor(img, cvt_code)
-    
+
     # Resize image if too large
     if max(img.shape[:2]) > max_size:
         scale = max_size / max(img.shape[:2])
@@ -109,13 +118,12 @@ def show_image(img, box, score_map=None, box_fmt='ltwh', color=(0, 0, 255),
         )
         img = cv.resize(img, out_size)
         box = np.array(box, dtype=np.float32) * scale
-    
+
     # Check box format
-    assert box_fmt in ['ltwh', 'ltrb']
     box = np.array(box, dtype=np.int32)
     if box_fmt == 'ltrb':
-        box[:, 2:] -= box[:, :2]
-    
+        box[2:] -= box[:2]
+
     # Clip box if out of frame
     bound = np.array(img.shape[1::-1])
     box[:2] = np.clip(box[:2], 0, bound)
@@ -124,9 +132,15 @@ def show_image(img, box, score_map=None, box_fmt='ltwh', color=(0, 0, 255),
     # Draw box
     top_left = (box[0], box[1])
     bot_right = (box[0] + box[2], box[1] + box[3])
-    img = cv.rectangle(img, top_left, bot_right, color, thickness)
+    img = cv.rectangle(
+        img,
+        top_left,
+        bot_right,
+        box_color,
+        box_thickness
+    )
     
-    # Concatenate score map
+    # Concatenate score map (align with image height)
     if score_map is not None:
         scale = max_size / max(score_map.shape[1])
         out_size = (
@@ -134,20 +148,30 @@ def show_image(img, box, score_map=None, box_fmt='ltwh', color=(0, 0, 255),
             int(score_map.shape[0] * scale)
         )
         score_map = cv.resize(score_map, out_size)
+        
+        # Reshape score_map
+        
+        # Convert color code
+        
+        # Horizontally concatenate to image
         img = np.concatenate((img, score_map), axis=1)
     
     # Display image
-    win_name = 'window_{}'.format(fig_n)
-    cv.imshow(win_name, img)
+    cv.imshow("", img)
+    cv.setWindowTitle("", window_title)
     cv.waitKey(delay)
-
     return img
 
 
-def crop_and_resize(img, center, in_size, out_size,
-                    border_type=cv.BORDER_CONSTANT,
-                    border_value=(0, 0, 0),
-                    interp=cv.INTER_LINEAR):
+def crop_and_resize(
+    img, 
+    center, 
+    in_size, 
+    out_size,
+    border_type=cv.BORDER_CONSTANT,
+    border_value=(0, 0, 0),
+    interp=cv.INTER_LINEAR
+    ):
     """Returns cropped and resized centered image.
     
     Parameters
@@ -203,5 +227,4 @@ def crop_and_resize(img, center, in_size, out_size,
         (out_size, out_size),
         interpolation=interp
     )
-
     return patch
