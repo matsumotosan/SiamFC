@@ -34,18 +34,18 @@ def setup_logger(save_dir="logs", name=None):
         name=name
     )
     return logger
-
+    
 
 def main(cfg):
     torch.set_default_dtype(torch.float32)
-
+    
     # Initialize encoder
     if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
         # encoder = AlexNet_torch()
     # elif cfg.network.arch == 'random_walk':
     #     encoder = ResNet()
-
+    
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
         encoder=encoder,
@@ -57,14 +57,14 @@ def main(cfg):
         loss=bce_loss_balanced,
         init_weights=True
     )
-
+    
     # Define transforms
     transforms = SiamFCTransforms()
-
+    
     # Initialize dataloaders
     if cfg.data.name == "got10k":
         # got10k_dm = GOT10kDataModule()
-
+        
         # Training
         train_seqs = GOT10k(root_dir=cfg.data.root_dir, subset='train')
         train_dataset = Pair(seqs=train_seqs, transforms=transforms)
@@ -75,7 +75,7 @@ def main(cfg):
             drop_last=True,
             num_workers=6
         )
-
+        
         # Validation
         val_seqs = GOT10k(root_dir=cfg.data.root_dir, subset='val')
         val_dataset = Pair(seqs=val_seqs, transforms=transforms)
@@ -86,7 +86,7 @@ def main(cfg):
             drop_last=True,
             num_workers=6
         )
-
+        
         # Test
         test_seqs = GOT10k(root_dir=cfg.data.root_dir, subset='test')
         test_dataset = Pair(seqs=test_seqs, transforms=transforms)
@@ -97,7 +97,7 @@ def main(cfg):
             drop_last=True,
             num_workers=6
         )
-
+    
     # Initialize trainer with logger and custom checkpoints
     logger = setup_logger("logs", cfg.network.arch)
     checkpoints = setup_checkpoints()
@@ -117,13 +117,13 @@ def main(cfg):
         val_dataloaders=val_dataloader,
         ckpt_path=cfg.network.ckpt_path
     )
-
+    
     # Test model
     # trainer.test(
     #     model=siamfc_model,
     #     dataloaders=test_dataloader
     # )
-
+    
     # Save encoder weights
     torch.save(
         siamfc_model.encoder.state_dict(),
@@ -141,9 +141,9 @@ if __name__ == "__main__":
         default="./conf/train/train_alexnet.yaml",
         help="Path to training config file."
     )
-
+    
     args = parser.parse_args()
     with open(args.config_file) as f:
         cfg = OmegaConf.load(f)
-
+        
     main(cfg)

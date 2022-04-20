@@ -13,31 +13,31 @@ patch_dict = {}
 
 def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     """Create ground truth score map.
-
+    
     Originally formulated as:
         y[u] = +1 if k * ||u - c || <= R, otherwise -1.
-
+    
     In implementation, we choose to create the labels as:
         y[u] = +1 if ||u - c || <= (R / k), otherwise -1.
-
+    
     where u=(x,y) is the position of element on the score map.
-
+    
     Parameters
     ----------
     size : ndarray of shape (N, C, H, W)
         Size of score map
-
+    
     k : int
         Stride of the encoder network
-
+    
     r_pos : int
         Radius threshold to be considered a positive example
-
+    
     r_neg : int
-
+    
     metric : str, default='l1'
         Metric for calculating distance to center, {'l1', 'l2'}
-
+    
     Returns
     -------
     labels : ndarray of shape (N, C, H, W)
@@ -53,7 +53,7 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     # Calculate scaled distance threshold (R / k)
     r_pos /= k
     r_neg /= k
-
+    
     # Calculate distance to center
     if metric == "l1":
         dist = np.linalg.norm(xy, ord=1, axis=0)
@@ -61,7 +61,7 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
         dist = np.linalg.norm(xy, ord='fro', axis=0)
     else:
         return ValueError("Invalid distance metric.")
-
+    
     # Enter labels (+1 if <= R, -1 otherwise)
     labels = np.where(
         dist <= r_pos, 
@@ -72,24 +72,39 @@ def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     # Reshape to match size of score map
     labels = labels.reshape((1, 1, h, w))
     labels = np.tile(labels, (n, c, 1, 1))
-
+    
     return labels
 
 
 def read_image(img_file, cvt_code=cv.COLOR_BGR2RGB):
+    """Read image and optionally convert color space.
+    
+    Parameters
+    ----------
+    img_file : str
+        Path to image
+    
+    cvt_code : int, default=cv.COLOR_BGR2RGB (=4)
+        Desired color space code
+        
+    Returns
+    -------
+    img :
+        Image (color space conversion if specified)
+    """
     img = cv.imread(img_file, cv.IMREAD_COLOR)
     if cvt_code is not None:
         img = cv.cvtColor(img, cvt_code)
     return img
 
 
-def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
-               thickness=3, fig_n=1, delay=1, visualize=True,
-               cvt_code=cv.COLOR_RGB2BGR):
+def show_image(img, boxes=None, score_map=None, box_fmt='ltwh', colors=None,
+               thickness=3, fig_n=1, delay=1, cvt_code=cv.COLOR_RGB2BGR):
+    # Color conversion
     if cvt_code is not None:
         img = cv.cvtColor(img, cvt_code)
-
-    # resize img if necessary
+    
+    # Resize image if too large
     max_size = 960
     if max(img.shape[:2]) > max_size:
         scale = max_size / max(img.shape[:2])
@@ -99,20 +114,22 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
         img = cv.resize(img, out_size)
         if boxes is not None:
             boxes = np.array(boxes, dtype=np.float32) * scale
-
+    
     if boxes is not None:
+        # Check box format
         assert box_fmt in ['ltwh', 'ltrb']
         boxes = np.array(boxes, dtype=np.int32)
         if boxes.ndim == 1:
             boxes = np.expand_dims(boxes, axis=0)
         if box_fmt == 'ltrb':
             boxes[:, 2:] -= boxes[:, :2]
-
-        # clip bounding boxes
+        
+        # Clip boxes if out of frame
         bound = np.array(img.shape[1::-1])[None, :]
         boxes[:, :2] = np.clip(boxes[:, :2], 0, bound)
         boxes[:, 2:] = np.clip(boxes[:, 2:], 0, bound - boxes[:, :2])
-
+        
+        # Set color for each box
         if colors is None:
             colors = [
                 (0, 0, 255),
@@ -130,17 +147,23 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
         colors = np.array(colors, dtype=np.int32)
         if colors.ndim == 1:
             colors = np.expand_dims(colors, axis=0)
-
+       
+        # Draw each box
         for i, box in enumerate(boxes):
             color = colors[i % len(colors)]
-            pt1 = (box[0], box[1])
-            pt2 = (box[0] + box[2], box[1] + box[3])
-            img = cv.rectangle(img, pt1, pt2, color.tolist(), thickness)
-
-    if visualize:
-        winname = 'window_{}'.format(fig_n)
-        cv.imshow(winname, img)
-        cv.waitKey(delay)
+            top_left = (box[0], box[1])
+            bot_right = (box[0] + box[2], box[1] + box[3])
+            img = cv.rectangle(img, top_left, bot_right, color.tolist(), thickness)
+    
+    # Concatenate response map
+    # if score_map is not None:
+    #     score_map = cv.resize(response_map, out_size)
+    #     img = np.concatenate((img, score_map), axis=1)
+    
+    # Display image
+    win_name = 'window_{}'.format(fig_n)
+    cv.imshow(win_name, img)
+    cv.waitKey(delay)
 
     return img
 
@@ -148,7 +171,7 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
 def show_frame(image, boxes=None, fig_n=1, pause=0.001,
                linewidth=3, cmap=None, colors=None, legends=None) -> None:
     """Visualize an image w/o drawing rectangle(s).
-
+    
     Args:
         image (numpy.ndarray or PIL.Image): Image to show.
         boxes (numpy.array or a list of numpy.ndarray, optional): A 4 dimensional array
@@ -175,7 +198,7 @@ def show_frame(image, boxes=None, fig_n=1, pause=0.001,
     if boxes is not None:
         if not isinstance(boxes, (list, tuple)):
             boxes = [boxes]
-
+        
         if colors is None:
             colors = ['r', 'g', 'b', 'c', 'm', 'y'] + \
                 list(mcolors.CSS4_COLORS.keys())
@@ -196,7 +219,7 @@ def show_frame(image, boxes=None, fig_n=1, pause=0.001,
                 patch.set_xy((box[0], box[1]))
                 patch.set_width(box[2])
                 patch.set_height(box[3])
-
+        
         if legends is not None:
             fig_dict[fig_n].axes.legend(
                 patch_dict[fig_n], legends, loc=1,
@@ -206,63 +229,62 @@ def show_frame(image, boxes=None, fig_n=1, pause=0.001,
     plt.draw()
 
 
-def crop_and_resize(img, center, size, out_size,
+def crop_and_resize(img, center, in_size, out_size,
                     border_type=cv.BORDER_CONSTANT,
                     border_value=(0, 0, 0),
                     interp=cv.INTER_LINEAR):
-    """Crop and resize image patch.
-
+    """Returns cropped and resized centered image.
+    
     Parameters
     ----------
-    img : ndarray of shape (size, size)
+    img : ndarray of shape (H, W, 3)
         Original image
-
+    
     center : ndarray of shape (2,)
-        Center of patch to be extracted
-
-    size : int
-        Size of patch to be extracted
-
+        Center of bounding box (y, x)
+        Coordinates with respect to top left of image
+        
+    in_size : int
+        Size of input exemplar image
+        
     out_size : int
-        Size of resized patch
-
+        Size of ouput exemplar image
+        
     border_type : default=cv.BORDER_CONSTANT
         Type of border when adding padding to image
-
+    
     border_value : ndarray of shape (3,)
-        Value to be used for border
-
+        Value to be used for border padding
+    
     interp : default=cv.INTER_LINEAR
-        Interpolation method to be used in resizing.
+        Interpolation method to be used in resizing. 
         cv.INTER_CUBIC would provide higher resolution, but cv.INTER_LINEAR is faster.
-
+    
     Returns
     -------
     patch : ndarray of shape (out_size, out_size)
         Cropped and resized image patch
     """
-    # Calculate coordinates of corners (0-indexed)
-    size = np.round(size)
-    corners = np.concatenate((
-        np.round(center - (size - 1) / 2),
-        np.round(center - (size - 1) / 2) + size)).astype(int)
+    # Calculate coordinates of corners of exemplar image in reference to original image
+    in_size = np.round(in_size)
+    top_left = np.round(center - (in_size - 1) / 2)
+    corners = np.concatenate((top_left, top_left + in_size)).astype(int)
 
-    # Pad image (if necessary)
+    # Corners of patch
     pads = np.concatenate((
-        -corners[:2], corners[2:] - img.shape[:2]))
+        -corners[:2], 
+        corners[2:] - img.shape[:2])
+    )
+    
+    # Add padding (if necessary)
     npad = max(0, int(pads.max()))
     if npad > 0:
-        img = cv.copyMakeBorder(
-            img, npad, npad, npad, npad,
-            border_type, value=border_value)
+        img = cv.copyMakeBorder(img, npad, npad, npad, npad, border_type, value=border_value)
+        corners += npad
 
-    # Crop image patch
-    corners = (corners + npad).astype(int)
-    patch = img[corners[0]:corners[2], corners[1]:corners[3]]
-
-    # Resize to out_size
+    # Crop image patch and resize
     patch = cv.resize(
-        patch, 
+        img[corners[0]:corners[2], corners[1]:corners[3]], 
         (out_size, out_size),
         interpolation=interp
     )

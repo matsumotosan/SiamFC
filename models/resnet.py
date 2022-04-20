@@ -58,9 +58,9 @@ class ResNet(torch_resnet.ResNet):
         x = F.avg_pool2d(x,(2,2)) if self.layer2 is None else self.layer2(x)
         x = x if self.layer3 is None else self.layer3(x) 
         x = x if self.layer4 is None else self.layer4(x) 
-
+    
         return x        
-
+    
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
@@ -85,10 +85,10 @@ class resnet_18(nn.Module):
         else:
             self.model.modify()
         self.total_stride = 8
-
+    
     def forward(self, x):
         return self.model(x)
-
+    
 class resnet_50(nn.Module):
     def __init__(self, feature_layer='layer3', pretrained=False):
         super().__init__()
@@ -98,6 +98,7 @@ class resnet_50(nn.Module):
         else:
             self.model.modify()
         self.total_stride = 8
-
+    
     def forward(self, x):
         return self.model(x)
+    

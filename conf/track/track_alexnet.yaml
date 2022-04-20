@@ -10,13 +10,13 @@ hparams:
 data_dir: data/GOT-10k/test/GOT-10k_Test_000150/
 # data_dir = 'C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k/train/GOT-10k_Train_000001/'
 tracker:
-  response_up: 16
-  response_sz: 17
-  scale_step: 1.025 #1.0375
-  scale_lr: 0.35 #0.59
-  scale_penalty: 0.975
-  scale_num: 5 #3
   exemplar_sz: 127
   instance_sz: 255
+  score_sz: 17
+  upsample_factor: 16
   context: 0.5
+  scale_num: 3
+  scale_step: 1.025
+  scale_lr: 0.35
+  scale_penalty: 0.975
   window_influence: 0.176

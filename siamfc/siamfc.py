@@ -24,27 +24,27 @@ class SiamFCNet(pl.LightningModule):
         init_weights=False
         ):
         """Fully-convolutional Siamese architecture (SiamFC).
-
+         
         Calculates score map of similarity between embeddings of exemplar images (z)
         with respect to search images (x).
-
+        
         Parameters
         ----------
         encoder : nn.Module
             Encoding network to embed exemplar and search images
-
-        loss :
+        
+        loss : 
             Loss function
-
+        
         batch_size : int
             Batch size
-
+        
         lr : float
             Learning rate
-
+        
         output_scale : float, default=0.01
             Output scaling factor for response maps
-
+        
         pretrained : bool, default=False
             Option to use pretrained encoder network
         """
@@ -64,7 +64,7 @@ class SiamFCNet(pl.LightningModule):
         self.loss = loss
         if init_weights == True:
             self._init_weights()
-
+        
         self.output_scale = output_scale
         self.r_pos = 16
         self.r_neg = 0
@@ -72,15 +72,15 @@ class SiamFCNet(pl.LightningModule):
 
     def forward(self, z, x):
         """Calculate response map for pairs of exemplar and search images.
-
+        
         Parameters
         ----------
         z : array of shape (N, 3, Wz, Hz)
             Exemplar image
-
+            
         x : array of shape (N, 3, Wx, Hx)
             Search image
-
+            
         Returns
         -------
         response_map : array of shape (N, 1, Wr, Hr)
@@ -127,7 +127,7 @@ class SiamFCNet(pl.LightningModule):
                 self.encoder.parameters(),
                 lr=self.initial_lr,
                 weight_decay=self.weight_decay)
-
+        
         gamma = np.power(self.ultimate_lr / self.initial_lr, 1 / self.epoch_num)
         scheduler = ExponentialLR(optimizer, gamma)
         return [optimizer], [scheduler]
@@ -155,14 +155,14 @@ class SiamFCNet(pl.LightningModule):
             x /= 255
             z = self.normalize(z)
             x = self.normalize(x)
-
+        
         # Calculate response map
         responses = self.forward(z, x)
         responses_np = responses.detach().cpu().numpy()
-
+        
         # Calculate center error
         center_error = calc_center_error(responses_np, self.total_stride)
-
+        
         # Generate ground truth score map
         if not (hasattr(self, 'labels') and self.labels.size() == responses.size()):
             labels = create_labels(
@@ -172,15 +172,35 @@ class SiamFCNet(pl.LightningModule):
                 self.r_neg
             )
             self.labels = torch.from_numpy(labels).to(self.device).float()
-
+        
         # Calculate loss (BCE or triplet)
         loss = self.loss(responses, self.labels)
         return loss, center_error
-
+    
     def _xcorr(self, hz, hx):
+        """Calculates cross-correlation map between exemplar and search image embeggins.
+        
+        Parameters
+        ----------
+        hz : torch.Tensor
+            Exemplar image embedding
+        
+        hx : torch.Tensor
+            Search image embedding
+        
+        Returns
+        -------
+        score_map : torch.Tensor
+            Cross correlation score map
+        """
         nz = hz.size(0)
         nx, c, h, w = hx.size()
         hx = hx.view(-1, nz * c, h, w)
-        out = F.conv2d(hx, hz, groups=nz)
-        out = out.view(nx, -1, out.size(-2), out.size(-1))
-        return out
+        score_map = F.conv2d(hx, hz, groups=nz)
+        score_map = score_map.view(
+            nx, 
+            -1, 
+            score_map.size(-2), 
+            score_map.size(-1)
+        )
+        return score_map
