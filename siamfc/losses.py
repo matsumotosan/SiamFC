@@ -53,9 +53,9 @@ def triplet_loss(scores, labels):
     -------
     triplet loss: torch.Tensor
     """
-    N, C, W, H = labels.shape
+    N = labels.shape[0]
     loss = 0
-    
+
     for i in range(N):
         label = labels[i].flatten()
         score = scores[i].flatten()
@@ -67,5 +67,5 @@ def triplet_loss(scores, labels):
         V_n = torch.tile(v_n, (1, m))
         V_p = V_p.T
         loss = loss+torch.sum(torch.log(1 + torch.exp(V_n - V_p))) / (m * n)
-        
+
     return loss

@@ -1,8 +1,8 @@
 """Train SiamFC network."""
 import argparse
 import torch
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
+from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from omegaconf import OmegaConf

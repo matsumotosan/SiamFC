@@ -1,6 +1,5 @@
 """Tracker class for SiamFC architecture. Based on the GOT-10k toolkit Tracker class at
 https://github.com/got-10k/toolkit/blob/master/got10k/trackers/__init__.py."""
-from asyncore import dispatcher_with_send
 import time
 import torch
 import cv2 as cv

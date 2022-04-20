@@ -62,7 +62,7 @@ class SiamFCNet(pl.LightningModule):
         self.weight_decay = weight_decay
         self.epoch_num = epoch_num
         self.loss = loss
-        if init_weights == True:
+        if init_weights:
             self._init_weights()
         
         self.output_scale = output_scale
@@ -150,7 +150,7 @@ class SiamFCNet(pl.LightningModule):
     def _shared_step(self, batch, batch_idx):
         """Returns loss for pass through model with provided batch."""
         (z, x) = batch
-        if self.preprocess == True:
+        if self.preprocess:
             z /= 255
             x /= 255
             z = self.normalize(z)
