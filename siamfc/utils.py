@@ -1,9 +1,8 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import matplotlib.colors as mcolors
-from PIL import Image
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 from models import *
 
 
@@ -93,6 +92,60 @@ def read_image(img_file, cvt_code=cv.COLOR_BGR2RGB):
     return img
 
 
+def _resize_image(img, size, dim='all'):
+    """Resize image to match desired dimension in specified direction.
+    
+    Parameters
+    ----------
+    img : ndarray of shape (W, H, 3)
+        Image to be resized
+    
+    size : int
+        Size in desired direction
+    
+    dim : str, {'all','hor','vert'}, default='all'
+        Dimension to scale
+    """
+    # Determine scaling factor
+    if dim == 'all':
+        scale = size / max(img.shape[:2])
+    elif dim == 'hor':
+        scale = size / img.shape[1]
+    elif dim == 'vert':
+        scale = size / img.shape[0]        
+    
+    # Calculate desired dimensions of resized image
+    dsize = (
+        int(img.shape[1] * scale),  # width
+        int(img.shape[0] * scale)   # height
+    )
+    
+    # Resize image
+    img = cv.resize(img, dsize, interpolation=cv.INTER_LINEAR)
+    return img, scale
+
+
+def _apply_cmap(img, cmap='inferno'):
+    """Apply color map to 2D image.
+    
+    Parameters
+    ----------
+    img : ndarray of shape (H, W)
+        2D score map
+        
+    cmap : str
+        Colormap
+    
+    Returns
+    -------
+    img : ndarray of shape (H, W, 3)
+        RGB image
+    """
+    sm = ScalarMappable(cmap=cmap)
+    img = (255 * sm.to_rgba(img)[:, :, :3]).astype(np.uint8)
+    return img
+
+
 def show_image(
     img,
     box,
@@ -110,17 +163,10 @@ def show_image(
         img = cv.cvtColor(img, cvt_code)
 
     # Resize image if too large
-    if max(img.shape[:2]) > max_size:
-        scale = max_size / max(img.shape[:2])
-        out_size = (
-            int(img.shape[1] * scale),
-            int(img.shape[0] * scale)
-        )
-        img = cv.resize(img, out_size)
-        box = np.array(box, dtype=np.float32) * scale
+    img, scale = _resize_image(img, max_size)
+    box = np.array(box * scale, dtype=np.int32)
 
     # Check box format
-    box = np.array(box, dtype=np.int32)
     if box_fmt == 'ltrb':
         box[2:] -= box[:2]
 
@@ -142,25 +188,24 @@ def show_image(
     
     # Concatenate score map (align with image height)
     if score_map is not None:
-        scale = max_size / max(score_map.shape[1])
-        out_size = (
-            int(score_map.shape[1] * scale),
-            int(score_map.shape[0] * scale)
+        score_map, _ = _resize_image(
+            score_map,
+            img.shape[0],
+            dim='vert'
         )
-        score_map = cv.resize(score_map, out_size)
         
-        # Reshape score_map
-        
-        # Convert color code
+        # Apply colormap to score map
+        score_map = _apply_cmap(score_map)
+        if cvt_code is not None:
+            score_map = cv.cvtColor(score_map, cvt_code)
         
         # Horizontally concatenate to image
-        img = np.concatenate((img, score_map), axis=1)
+        img = np.concatenate((img, score_map.astype(np.uint8)), axis=1)
     
     # Display image
     cv.imshow("", img)
     cv.setWindowTitle("", window_title)
     cv.waitKey(delay)
-    return img
 
 
 def crop_and_resize(

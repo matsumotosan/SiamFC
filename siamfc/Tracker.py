@@ -91,10 +91,11 @@ class SiamFCTracker:
                 show_image(
                     img, 
                     boxes[frame, :], 
-                    score_map=None,
-                    window_title=f"{vid_name}Frame {frame}/{n_frames}"
+                    score_map=score_map,
+                    window_title=f"{vid_name}Frame {frame+1}/{n_frames+1}"
                 )
 
+        cv.destroyAllWindows()
         return boxes, t
     
     @torch.no_grad()
