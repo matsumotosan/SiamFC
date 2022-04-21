@@ -22,8 +22,9 @@ class SiamFCTracker:
         self.siamese_net.eval()
         self.siamese_net.to(self.device)
         self.cfg = self.parse_args(**kwargs)
-        
-    def parse_args(self, **kwargs):
+    
+    @staticmethod
+    def parse_args(**kwargs):
         # Default parameters
         cfg = {
             'exemplar_sz': 127,
@@ -44,19 +45,22 @@ class SiamFCTracker:
                 cfg.update({key: val})
         return namedtuple('Config', cfg.keys())(**cfg)
     
-    def track(self, img_files, box, visualize=False, vid_name=""):
+    def track(self, img_files, box, box_style='ltwh', visualize=True, video_name=""):
         """Track given set of frames given initial box. Optionally visualize tracking.
         
         Parameters
         ----------
-        img_files : list (frames,)
-            Ordered list of files to frames
+        img_files : list (n_frames,)
+            List of image files
         
         box : ndarray of shape (4,)
             Initial bounding box
         
-        visualize : bool, default=False
+        visualize : bool, default=True
             Visualize tracking if True
+        
+        video_name : str
+            Name of video to be used in window title
         
         Returns
         -------
@@ -68,37 +72,37 @@ class SiamFCTracker:
         """
         # Get total number of frames
         n_frames = len(img_files)
-        
-        # Initialize bounding box for each frame
-        boxes = np.zeros((n_frames, 4))
-        boxes[0] = box
-        t = np.zeros(n_frames)
-        score_map = None
 
-        # Track object for each frame
-        # Stores bounding boxes in 'ltwh' format
-        for frame, img_file in enumerate(img_files):
+        # # Convert box format to be 0-indexed and center based [y, x, h, w]
+        if box_style == 'ltwh':
+            box = self._ltwh2yxhw(box)
+
+        # Initialize tracking parameters
+        img = read_image(img_files[0])
+        self.init(img, box)
+        if visualize:
+            self.display(img, f"{video_name} Frame {1}/{n_frames}")
+
+        # Update tracker for each frame
+        for frame, img_file in enumerate(img_files[1:]):
             img = read_image(img_file)
-            t0 = time.time()
-            if frame == 0:
-                self.init(img, boxes[0])
-            else:
-                boxes[frame, :], score_map = self.update(img)
-
-            t[frame] = time.time() - t0
+            self.update(img)
             if visualize:
-                show_image(
-                    img, 
-                    boxes[frame, :], 
-                    score_map=score_map,
-                    window_title=f"{vid_name}Frame {frame+1}/{n_frames+1}"
-                )
+                self.display(img, f"{video_name} Frame {frame+2}/{n_frames}")
 
         cv.destroyAllWindows()
-        return boxes, t
     
     @torch.no_grad()
-    def init(self, img, box, box_style='ltwh') -> None:
+    def display(self, img, window_title=""):
+        show_image(
+            img,
+            self.box,
+            score_map=self.score_map,
+            window_title=window_title
+        )
+    
+    @torch.no_grad()
+    def init(self, img, box) -> None:
         """Initialize tracker parameters. Pre-calculates kernel (exemplar image embedding).
         
         Parameters
@@ -112,26 +116,26 @@ class SiamFCTracker:
         box_style : str, default='ltwh'
             Annotation format of bounding box
         """
-        # Convert box format to be 0-indexed and center based [y, x, h, w]
-        if box_style == 'ltwh':
-            box = self._ltwh2yxhw(box)
-            self.box_center = box[:2]
-            self.box_sz = box[2:]
-        
+        # Initialize bounding box and score map
+        self.box = box
+        self.box_center = box[:2]
+        self.box_sz = box[2:]
+        self.score_map = None
+
         # Calculate size of upsampled score map
         self.upsample_sz = self.cfg.upsample_factor * self.cfg.score_sz
-        
+
         # Create hanning window to regularize score map
         self._create_hanning_window()
-        
+
         # Calculate scale factors
         self._get_scale_factors()
-        
+
         # Calculate image scaling
         p = self.cfg.context * np.mean(self.box_sz)
         self.z_sz = np.sqrt(np.prod(self.box_sz + 2 * p))
         self.x_sz = self.z_sz * (self.cfg.instance_sz / self.cfg.exemplar_sz)
-        
+
         # Get exemplar image from first frame
         self.avg_color = np.mean(img, axis=(0, 1))
         z = crop_and_resize(
@@ -141,21 +145,22 @@ class SiamFCTracker:
             out_size=self.cfg.exemplar_sz,
             border_value=self.avg_color
         )
-        
+
         # Reshape (H, W, 3) -> (1, 3, H, W)
         z = torch.from_numpy(z).to(self.device).permute(2, 0, 1).unsqueeze(0).float()
-        
+
         # Normalize (if necessary)
         if self.siamese_net.preprocess == True:
             z /= 255
             z = self.siamese_net.normalize(z)
-            
+
         # Calculate exemplar image embedding
         self.kernel = self.siamese_net.encoder(z)
-    
+
     @torch.no_grad()
     def update(self, img, interp=cv.INTER_CUBIC):
-        """Update tracker given new frame.
+        """Update tracker given new frame. Calculate cross correlation score map for 
+        single target embedding and search embeddings over different scales.
         
         Parameters
         ----------
@@ -169,6 +174,9 @@ class SiamFCTracker:
         -------
         box : ndarray of shape (4,)
             Bounding box for new frame
+        
+        score_map : ndarray of shape ()
+            Cross correlation score map
         """
         # Get search images at different scales
         x = np.stack([crop_and_resize(
@@ -187,10 +195,41 @@ class SiamFCTracker:
         if self.siamese_net.preprocess:
             x /= 255
             x = self.siamese_net.normalize(x)
+
+        # Calculate and choose best score map over all search image scales
+        self.score_map, score_idx, loc = self._calculate_score_map(
+            self.siamese_net.encoder(x),
+            interp=interp
+        )
+
+        # Locate target center
+        disp_in_response = loc - (self.upsample_sz - 1) / 2
+        disp_in_instance = disp_in_response * \
+            self.siamese_net.total_stride / self.cfg.upsample_factor
+        disp_in_image = disp_in_instance * self.x_sz * \
+            self.scale_factors[score_idx] / self.cfg.instance_sz
             
-        # Compute search image embedding
-        x = self.siamese_net.encoder(x) 
-       
+        # Update bounding box center
+        self.box_center += disp_in_image
+
+        # Update size
+        scale = (1 - self.cfg.scale_lr) * 1.0 + \
+            self.cfg.scale_lr * self.scale_factors[score_idx]
+            
+        self.box_sz *= scale    # bounding bbox
+        self.z_sz *= scale      # exemplar image
+        self.x_sz *= scale      # search image
+        
+        # Return 1-indexed and left-top based bounding box
+        self.box = np.array([
+            self.box_center[1] + 1 - (self.box_sz[1] - 1) / 2,  # y
+            self.box_center[0] + 1 - (self.box_sz[0] - 1) / 2,  # x
+            self.box_sz[1],                                     # w
+            self.box_sz[0]                                      # h
+        ])
+    
+    @torch.no_grad() 
+    def _calculate_score_map(self, x, interp):
         # Compute score map
         scores = self.siamese_net._xcorr(self.kernel, x) # (scale_num, 1, 17, 17)
         scores = scores.squeeze(1).cpu().numpy()         # (scale_num x 17 x 17)
@@ -218,38 +257,12 @@ class SiamFCTracker:
         # Apply hanning window to the score map
         score_map = (1 - self.cfg.window_influence) * score_map + \
             self.cfg.window_influence * self.hanning_window
-        
-        # Find maximum score index
+
+        # Calculate maximum score location
         loc = np.array(np.unravel_index(score_map.argmax(), score_map.shape))
 
-        # Locate target center
-        disp_in_response = loc - (self.upsample_sz - 1) / 2
-        disp_in_instance = disp_in_response * \
-            self.siamese_net.total_stride / self.cfg.upsample_factor
-        disp_in_image = disp_in_instance * self.x_sz * \
-            self.scale_factors[score_idx] / self.cfg.instance_sz
-            
-        # Update bounding box center
-        self.box_center += disp_in_image
+        return score_map, score_idx, loc
 
-        # Update size
-        scale = (1 - self.cfg.scale_lr) * 1.0 + \
-            self.cfg.scale_lr * self.scale_factors[score_idx]
-            
-        self.box_sz *= scale    # bounding bbox
-        self.z_sz *= scale      # exemplar image
-        self.x_sz *= scale      # search image
-        
-        # Return 1-indexed and left-top based bounding box
-        box = np.array([
-            self.box_center[1] + 1 - (self.box_sz[1] - 1) / 2,  # y
-            self.box_center[0] + 1 - (self.box_sz[0] - 1) / 2,  # x
-            self.box_sz[1],                                     # 
-            self.box_sz[0]                                      # 
-        ])
-        
-        return box, score_map
-    
     def _create_hanning_window(self):
         self.hanning_window = np.outer(
             np.hanning(self.upsample_sz),
@@ -263,7 +276,7 @@ class SiamFCTracker:
             self.cfg.scale_num
         )
         self.scale_factors = self.cfg.scale_step ** powers
-        
+    
     @staticmethod
     def _ltwh2yxhw(box):
         box = np.array([
