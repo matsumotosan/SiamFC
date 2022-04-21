@@ -4,12 +4,18 @@ import numpy as np
 def calc_center_error(output, upscale_factor):
     """This metric measures the displacement between the estimated center of the target and the ground-truth 
     
-    Args:
-        output: (np.ndarray) The output of the network with dimension [Bx1xHxW]
-        upscale_factor: (int) Indicates how much we must upscale the output feature map to match it to he input images
+    Parameters
+    ----------
+    output: ndarray of shape (B, 1, H, W)
+        Network output
     
-    Returns:
-        c_error:(int) The center displacement in pixels
+    upscale_factor: int 
+        Output feature map upscaling factor to match input image dimensions
+    
+    Returns
+    -------
+    c_error: int
+        Center displacement in pixels    
     """
     b = output.shape[0]
     s = output.shape[-1]

@@ -83,7 +83,7 @@ class SiamFCNet(pl.LightningModule):
             
         Returns
         -------
-        response_map : array of shape (N, 1, Wr, Hr)
+        score_map : array of shape (N, 1, Wr, Hr)
             Cross-correlation response map of embedded images
         """
         exemplar_embedded = self.encoder(z)
@@ -177,7 +177,8 @@ class SiamFCNet(pl.LightningModule):
         loss = self.loss(responses, self.labels)
         return loss, center_error
     
-    def _xcorr(self, hz, hx):
+    @staticmethod
+    def _xcorr(hz, hx):
         """Calculates cross-correlation map between exemplar and search image embeggins.
         
         Parameters
@@ -198,9 +199,9 @@ class SiamFCNet(pl.LightningModule):
         hx = hx.view(-1, nz * c, h, w)
         score_map = F.conv2d(hx, hz, groups=nz)
         score_map = score_map.view(
-            nx, 
-            -1, 
-            score_map.size(-2), 
+            nx,
+            -1,
+            score_map.size(-2),
             score_map.size(-1)
         )
         return score_map

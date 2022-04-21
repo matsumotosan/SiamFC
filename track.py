@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from omegaconf import OmegaConf
 from siamfc import *
-from models import *
+from siamfc.models import *
 
 # Notes
 # Test 100: struggle to distinguish between two chicks, fast motion

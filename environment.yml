@@ -8,4 +8,5 @@ dependencies:
   - torchvision
   - pytorch-lightning
   - omegaconf
+  - wandb
 prefix: /Users/shion/opt/anaconda3/envs/siamfc

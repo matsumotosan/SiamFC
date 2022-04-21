@@ -1,7 +1,7 @@
 network:
   arch: alexnet
-  ckpt_path: logs\alexnet\version_0\checkpoints\epoch=49-step=58300-val_losss=0.0.ckpt
-  trained_model_path: pretrained/alexnet/pretrained_alexnet_e50.pth
+  ckpt_path: logs/alexnet/version_0/checkpoints/epoch=49-step=58300-val_losss=0.0.ckpt
+  trained_model_path: pretrained/alexnet/pretrained_alexnet_e50_trial.pth
 hparams:
   batch_size: 8
   epoch_num: 50
@@ -11,3 +11,7 @@ hparams:
 data:
   name: got10k
   root_dir: data/GOT-10k
+logging:
+  logger: tensorboard
+  log_dir: logs
+  checkpoints: val, latest
