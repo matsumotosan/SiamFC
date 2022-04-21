@@ -1,6 +1,5 @@
 """Tracker class for SiamFC architecture. Based on the GOT-10k toolkit Tracker class at
 https://github.com/got-10k/toolkit/blob/master/got10k/trackers/__init__.py."""
-import time
 import torch
 import cv2 as cv
 import numpy as np
@@ -45,13 +44,20 @@ class SiamFCTracker:
                 cfg.update({key: val})
         return namedtuple('Config', cfg.keys())(**cfg)
     
-    def track(self, img_files, box, box_style='ltwh', visualize=True, video_name=""):
+    def track(
+        self, 
+        img_files, 
+        box, 
+        box_style='ltwh', 
+        visualize=True, 
+        video_name=""
+    ):
         """Track given set of frames given initial box. Optionally visualize tracking.
         
         Parameters
         ----------
         img_files : list (n_frames,)
-            List of image files
+            List of ordered image files
         
         box : ndarray of shape (4,)
             Initial bounding box
@@ -70,14 +76,16 @@ class SiamFCTracker:
         t : ndarray of shape (frames,)
             Time stamps
         """
-        # Get total number of frames
-        n_frames = len(img_files)
-
         # Initialize tracking parameters
+        n_frames = len(img_files)
         img = read_image(img_files[0])
         self.init(img, box, box_style)
         if visualize:
-            self.display(img, box, window_title=f"{video_name} Frame {1}/{n_frames}")
+            self.display(
+                img, 
+                box, 
+                window_title=f"{video_name} Frame {1}/{n_frames}"
+            )
 
         # Update tracker for each frame
         for frame, img_file in enumerate(img_files[1:]):
@@ -93,16 +101,6 @@ class SiamFCTracker:
                 )
 
         cv.destroyAllWindows()
-    
-    @staticmethod
-    def display(img, box, score_map=None, search_img=None, window_title=""):
-        show_image(
-            img,
-            box,
-            score_map=score_map,
-            search_img=search_img,
-            window_title=window_title
-        )
     
     @torch.no_grad()
     def init(self, img, box, box_style='ltwh') -> None:
@@ -298,3 +296,19 @@ class SiamFCTracker:
         score_idx = np.argmax(np.amax(scores, axis=(1, 2)))
         score_map = scores[score_idx]
         return score_map, score_idx
+
+    @staticmethod
+    def display(
+        img, 
+        box, 
+        score_map=None, 
+        search_img=None, 
+        window_title=""
+    ):
+        show_image(
+            img,
+            box,
+            score_map=score_map,
+            search_img=search_img,
+            window_title=window_title
+        )
