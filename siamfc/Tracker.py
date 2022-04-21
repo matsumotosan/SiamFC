@@ -73,36 +73,39 @@ class SiamFCTracker:
         # Get total number of frames
         n_frames = len(img_files)
 
-        # # Convert box format to be 0-indexed and center based [y, x, h, w]
-        if box_style == 'ltwh':
-            box = self._ltwh2yxhw(box)
-
         # Initialize tracking parameters
         img = read_image(img_files[0])
-        self.init(img, box)
+        self.init(img, box, box_style)
         if visualize:
-            self.display(img, f"{video_name} Frame {1}/{n_frames}")
+            self.display(img, box, window_title=f"{video_name} Frame {1}/{n_frames}")
 
         # Update tracker for each frame
         for frame, img_file in enumerate(img_files[1:]):
             img = read_image(img_file)
-            self.update(img)
+            box, score_map, search_img = self.update(img)
             if visualize:
-                self.display(img, f"{video_name} Frame {frame+2}/{n_frames}")
+                self.display(
+                    img,
+                    box,
+                    score_map=score_map,
+                    search_img=search_img,
+                    window_title=f"{video_name} Frame {frame+2}/{n_frames}"
+                )
 
         cv.destroyAllWindows()
     
-    @torch.no_grad()
-    def display(self, img, window_title=""):
+    @staticmethod
+    def display(img, box, score_map=None, search_img=None, window_title=""):
         show_image(
             img,
-            self.box,
-            score_map=self.score_map,
+            box,
+            score_map=score_map,
+            search_img=search_img,
             window_title=window_title
         )
     
     @torch.no_grad()
-    def init(self, img, box) -> None:
+    def init(self, img, box, box_style='ltwh') -> None:
         """Initialize tracker parameters. Pre-calculates kernel (exemplar image embedding).
         
         Parameters
@@ -116,8 +119,11 @@ class SiamFCTracker:
         box_style : str, default='ltwh'
             Annotation format of bounding box
         """
+        # Convert box format to be 0-indexed and center based [y, x, h, w]
+        if box_style == 'ltwh':
+            box = self._ltwh2yxhw(box)
+
         # Initialize bounding box and score map
-        self.box = box
         self.box_center = box[:2]
         self.box_sz = box[2:]
         self.score_map = None
@@ -179,17 +185,17 @@ class SiamFCTracker:
             Cross correlation score map
         """
         # Get search images at different scales
-        x = np.stack([crop_and_resize(
-                img,
-                self.box_center,
-                in_size=self.x_sz * f,
-                out_size=self.cfg.instance_sz,
-                border_value=self.avg_color)
-            for f in self.scale_factors], axis=0
+        search_images = np.stack([crop_and_resize(
+            img,
+            self.box_center,
+            in_size=self.x_sz * f,
+            out_size=self.cfg.instance_sz,
+            border_value=self.avg_color) 
+                                  for f in self.scale_factors], axis=0
         )
         
         # Reshape (n_scales, H, W, 3) -> (n_scales, 3, H, W)
-        x = torch.from_numpy(x).to(self.device).permute(0, 3, 1, 2).float()
+        x = torch.from_numpy(search_images).to(self.device).permute(0, 3, 1, 2).float()
         
         # Normalize (if necessary)
         if self.siamese_net.preprocess:
@@ -197,7 +203,7 @@ class SiamFCTracker:
             x = self.siamese_net.normalize(x)
 
         # Calculate and choose best score map over all search image scales
-        self.score_map, score_idx, loc = self._calculate_score_map(
+        score_map, score_idx, loc = self._calculate_score_map(
             self.siamese_net.encoder(x),
             interp=interp
         )
@@ -221,13 +227,14 @@ class SiamFCTracker:
         self.x_sz *= scale      # search image
         
         # Return 1-indexed and left-top based bounding box
-        self.box = np.array([
+        box = np.array([
             self.box_center[1] + 1 - (self.box_sz[1] - 1) / 2,  # y
             self.box_center[0] + 1 - (self.box_sz[0] - 1) / 2,  # x
             self.box_sz[1],                                     # w
             self.box_sz[0]                                      # h
         ])
-    
+        return box, score_map, search_images[score_idx]
+
     @torch.no_grad() 
     def _calculate_score_map(self, x, interp):
         # Compute score map

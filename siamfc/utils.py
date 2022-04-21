@@ -149,11 +149,11 @@ def _apply_cmap(img, cmap='inferno'):
 def show_image(
     img,
     box,
+    score_map=None,
+    search_img=None,
     box_fmt='ltwh',
     box_color=(0, 0, 255),
     box_thickness=3,
-    search_image=None,
-    score_map=None,
     max_size=960, 
     window_title="", 
     delay=1, 
@@ -186,22 +186,37 @@ def show_image(
         box_color,
         box_thickness
     )
-    
-    # Concatenate score map (align with image height)
+
+    # Resize score map and apply colormap
     if score_map is not None:
         score_map, _ = _resize_image(
             score_map,
             img.shape[0],
             dim='vert'
         )
-        
-        # Apply colormap to score map
         score_map = _apply_cmap(score_map)
-        if cvt_code is not None:
+        if cvt_code:
             score_map = cv.cvtColor(score_map, cvt_code)
-        
-        # Horizontally concatenate to image
-        img = np.concatenate((img, score_map.astype(np.uint8)), axis=1)
+
+    # Resize search image
+    if search_img is not None:
+        search_img, _ = _resize_image(
+            search_img,
+            img.shape[0],
+            dim='vert'
+        )
+        if cvt_code is not None:
+            search_img = cv.cvtColor(search_img, cvt_code)
+
+    # Concatenate images horizontally
+    if score_map is not None and search_img is not None:
+        # Overlay score map on search image
+        img_score = cv.addWeighted(search_img, 0.6, score_map, 0.4, 0)
+        img = np.concatenate((img, img_score.astype(np.uint8)), axis=1)
+    elif score_map is not None:
+        img = np.concatenate((img, score_map.astype(np.uint8)), axis=1) 
+    elif search_img is not None:
+        img = np.concatenate((img, search_img.astype(np.uint8)), axis=1) 
     
     # Display image
     cv.imshow("", img)
