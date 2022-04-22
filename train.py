@@ -24,6 +24,7 @@ def main(cfg):
         batch_size=cfg.hparams.batch_size,
         initial_lr=cfg.hparams.initial_lr,
         ultimate_lr=cfg.hparams.ultimate_lr,
+        momentum=cfg.hparams.momentum,
         weight_decay=cfg.hparams.weight_decay,
         loss=bce_loss_balanced,
         init_weights=True

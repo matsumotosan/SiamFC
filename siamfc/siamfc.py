@@ -18,6 +18,7 @@ class SiamFCNet(pl.LightningModule):
         batch_size=8,
         initial_lr=1e-2,
         ultimate_lr=1e-5,
+        momentum=0.9,
         weight_decay=5e-4, 
         output_scale=0.001,
         preprocess=False,
@@ -59,6 +60,7 @@ class SiamFCNet(pl.LightningModule):
         self.batch_size = batch_size
         self.initial_lr = initial_lr
         self.ultimate_lr = ultimate_lr
+        self.momentum = momentum
         self.weight_decay = weight_decay
         self.epoch_num = epoch_num
         self.loss = loss
@@ -120,12 +122,14 @@ class SiamFCNet(pl.LightningModule):
         if optimizer == 'adam':
             optimizer = torch.optim.Adam(
                 self.encoder.parameters(), 
-                lr=self.initial_lr, 
+                lr=self.initial_lr,
+                momentum=self.momentum,
                 weight_decay=self.weight_decay)
         elif optimizer == 'sgd':
             optimizer = torch.optim.SGD(
                 self.encoder.parameters(),
                 lr=self.initial_lr,
+                momentum=self.momentum,
                 weight_decay=self.weight_decay)
         
         gamma = np.power(self.ultimate_lr / self.initial_lr, 1 / self.epoch_num)
