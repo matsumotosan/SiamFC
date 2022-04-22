@@ -8,7 +8,7 @@ from siamfc.models import *
 
 
 def main(cfg):
-    torch.set_default_dtype(torch.float32)
+    # torch.set_default_dtype(torch.float32)
 
     # Initialize encoder
     if cfg.network.arch == 'alexnet':
@@ -33,7 +33,8 @@ def main(cfg):
     # Initialize GOT-10k datamodule
     got10k_dm = GOT10kDataModule(
         data_dir=cfg.data.root_dir,
-        batch_size=cfg.hparams.batch_size
+        batch_size=cfg.hparams.batch_size,
+        transform=SiamFCTransforms()
     )
 
     # Initialize logger
@@ -65,7 +66,7 @@ def main(cfg):
         ckpt_path=cfg.network.ckpt_path
     )
 
-    # # Test model (bug)
+    # # Test model
     # trainer.test(
     #     model=siamfc_model,
     #     datamodule=got10k_dm

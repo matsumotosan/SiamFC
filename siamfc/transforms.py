@@ -1,5 +1,5 @@
-"""Adapted from https://github.com/huanglianghua/siamfc-pytorch"""
-
+"""Transforms for GOT-10k dataset. 
+Adapted from https://github.com/huanglianghua/siamfc-pytorch."""
 from ctypes.wintypes import SIZE
 import cv2
 import numpy as np
@@ -123,9 +123,13 @@ class ToTensor:
 
 
 class SiamFCTransforms:
-    """Transforms for SiamFC exemplar and search images.
-    """
-    def __init__(self, exempler_sz: int = 127, instance_sz: int = 255, context: float = 0.5):
+    """Transforms for SiamFC exemplar and search images."""
+    def __init__(
+        self,
+        exempler_sz: int = 127, 
+        instance_sz: int = 255, 
+        context: float = 0.5
+    ):
         self.exemplar_sz = exempler_sz
         self.instance_sz = instance_sz
         self.context = context

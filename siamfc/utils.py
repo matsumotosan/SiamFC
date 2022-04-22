@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
-# from siamfc.models import *
 
 
 def create_labels(size, k, r_pos, r_neg=0, metric='l1'):

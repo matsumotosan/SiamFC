@@ -1,3 +1,4 @@
+"""SiamFC network class."""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,7 +44,7 @@ class SiamFCNet(pl.LightningModule):
         lr : float
             Learning rate
         
-        output_scale : float, default=0.01
+        output_scale : float, default=0.001
             Output scaling factor for response maps
         
         pretrained : bool, default=False
@@ -124,13 +125,15 @@ class SiamFCNet(pl.LightningModule):
                 self.encoder.parameters(), 
                 lr=self.initial_lr,
                 momentum=self.momentum,
-                weight_decay=self.weight_decay)
+                weight_decay=self.weight_decay
+            )
         elif optimizer == 'sgd':
             optimizer = torch.optim.SGD(
                 self.encoder.parameters(),
                 lr=self.initial_lr,
                 momentum=self.momentum,
-                weight_decay=self.weight_decay)
+                weight_decay=self.weight_decay
+            )
         
         gamma = np.power(self.ultimate_lr / self.initial_lr, 1 / self.epoch_num)
         scheduler = ExponentialLR(optimizer, gamma)

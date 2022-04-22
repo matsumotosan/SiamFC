@@ -1,8 +1,8 @@
-from re import T
+"""DataModule class for GOT-10k dataset."""
 import cv2 as cv
 import numpy as np
 import pytorch_lightning as pl
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader
 from typing import Optional
 from got10k.datasets import GOT10k
 from .transforms import SiamFCTransforms
@@ -10,11 +10,12 @@ from .transforms import SiamFCTransforms
 
 class GOT10kDataModule(pl.LightningDataModule):
     """PyTorch LightningDataModule class for GOT-10k dataset."""
-    def __init__(self, data_dir='./data/GOT-10k', batch_size=8) -> None:
+    def __init__(self, data_dir='./data/GOT-10k', batch_size=8, transform=SiamFCTransforms) -> None:
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
-    
+        self.transform = transform
+ 
     def prepare_data(self) -> None:
         """Download and prepare data."""
         pass
@@ -24,12 +25,12 @@ class GOT10kDataModule(pl.LightningDataModule):
         if stage == "fit" or stage is None:
             train_seqs = GOT10k(root_dir=self.data_dir, subset='train')
             val_seqs = GOT10k(root_dir=self.data_dir, subset='val')
-            self.got10k_train = Pair(seqs=train_seqs, transforms=SiamFCTransforms)
-            self.got10k_val = Pair(seqs=val_seqs, transforms=SiamFCTransforms)
+            self.got10k_train = Pair(seqs=train_seqs, transforms=self.transform)
+            self.got10k_val = Pair(seqs=val_seqs, transforms=self.transform)
 
         if stage == "test" or stage is None:
             test_seqs = GOT10k(root_dir=self.data_dir, subset='test')
-            self.got10k_test = Pair(seqs=test_seqs, transforms=SiamFCTransforms)
+            self.got10k_test = Pair(seqs=test_seqs, transforms=self.transform)
 
     def train_dataloader(self) -> DataLoader:
         """Return training dataloader."""
@@ -97,7 +98,7 @@ class ImageNetDataModule(pl.LightningDataModule):
 
 
 class Pair(Dataset):
-    def __init__(self, seqs, transforms=None, max_frames_sep=100, pairs_per_seq=1):
+    def __init__(self, seqs, transforms=None, max_frames_sep=50, pairs_per_seq=1):
         """Data class for generating exemplar and target images from sequences of video frames.
         
         Parameters
@@ -106,13 +107,13 @@ class Pair(Dataset):
             Object containing list of filenames for raw images and annotations
             
         transforms : torch.Transform, default=None
-            PyTorch transforms to be used for exemplar and target images
+            PyTorch transforms to be used for exemplar and search images
         
-        max_frames_sep : int, default=100
+        max_frames_sep : int, default=50
             Maximum number of frames between exemplar and target images
         
         pairs_per_seq : int, default=1
-            Number of target/exemplar pairs to be generated from each sequence of video frames
+            Number of exemplar/search pairs for each video
         """
         super().__init__()
         self.seqs = seqs
@@ -128,26 +129,29 @@ class Pair(Dataset):
         index = self.indices[index % len(self.indices)]
         img_files, anno  = self.seqs[index]
         frame_indices = list(range(len(img_files)))
-        
-        # Select frame indices (ensure within maximum separation of number of frames)
-        rand_z, rand_x = np.sort(np.random.choice(frame_indices, 2, replace=False))
-        while rand_x - rand_z > self.max_frames_sep: 
-            rand_z, rand_x = np.sort(np.random.choice(frame_indices, 2, replace=False))# The two chosen frames should be at most T frames apart 
-        
+
+        # Select frame indices (within maximum number of frames)
+        z_idx, x_idx = self.pick_two(frame_indices)
+        while x_idx - z_idx > self.max_frames_sep:
+            z_idx, x_idx = self.pick_two(frame_indices)
+
         # Read exemplar and target images
-        z = cv.imread(img_files[rand_z], cv.IMREAD_COLOR) #May need to be converted to RGB color space
-        x = cv.imread(img_files[rand_x], cv.IMREAD_COLOR) #May need to be converted to RGB color space
+        z = cv.imread(img_files[z_idx], cv.IMREAD_COLOR)
+        x = cv.imread(img_files[x_idx], cv.IMREAD_COLOR)
         
         # Get annotations for exemplar and target images
-        box_z = anno[rand_z]
-        box_x = anno[rand_x]
-        
+        box_z = anno[z_idx]
+        box_x = anno[x_idx]
+
         # Perform image transforms on exemplar and target images
-        item = (z, x, box_z, box_x)
         if self.transforms is not None:
-            z, x = self.transforms(*item)
+            z, x = self.transforms(z, x, box_z, box_x)
 
         return z, x
-    
+
     def __len__(self):
         return len(self.indices) *  self.pairs_per_seq
+
+    @staticmethod
+    def pick_two(indices):
+        return np.sort(np.random.choice(indices, 2, replace=False))

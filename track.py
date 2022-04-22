@@ -1,4 +1,4 @@
-"""Tracking using trained SiamFC network."""
+"""Track using trained SiamFC network."""
 import glob
 import argparse
 import torch
@@ -61,12 +61,7 @@ def main(cfg):
         preprocess=preprocess,
         init_weights=False
     )
-    
-    # ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_9/checkpoints/epoch=49-step=58300.ckpt')
-    #ckpt = torch.load('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_14/checkpoints/epoch=49-step=58300.ckpt')
-    # siamese_net.load_state_dict(ckpt['state_dict'])
-    #siamese_net = SiamFCNet.load_from_checkpoint('C:/Users/xw/Desktop/eecs 542 final project/SiamFC-master/lightning_logs/version_0/checkpoints/epoch=3-step=4664.ckpt')
-    
+
     # Initialize tracker
     tracker = SiamFCTracker(
         siamese_net=siamese_net,
