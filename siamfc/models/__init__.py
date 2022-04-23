@@ -3,5 +3,7 @@ from .resnet import *
 
 __all__ = [
     "AlexNet",
-    "ResNet"
+    "ResNet",
+    "ResNet18",
+    "ResNet50"
 ]

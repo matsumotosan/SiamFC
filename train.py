@@ -8,14 +8,13 @@ from siamfc.models import *
 
 
 def main(cfg):
-    # torch.set_default_dtype(torch.float32)
-
     # Initialize encoder
     if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
-        # encoder = AlexNet_torch()
-    # elif cfg.network.arch == 'random_walk':
-    #     encoder = ResNet()
+    elif cfg.network.arch == 'resnet18':
+        encoder = ResNet18()
+    elif cfg.network.arch == "resnet50":
+        encoder = ResNet50()
 
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(

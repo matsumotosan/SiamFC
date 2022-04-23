@@ -76,7 +76,7 @@ def resnet50(pretrained=False, progress=True, **kwargs) -> ResNet:
     return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
                    **kwargs)
 
-class resnet_18(nn.Module):
+class ResNet18(nn.Module):
     def __init__(self, feature_layer='layer3', pretrained=False):
         super().__init__()
         self.model = resnet18(pretrained=pretrained)
@@ -89,7 +89,7 @@ class resnet_18(nn.Module):
     def forward(self, x):
         return self.model(x)
     
-class resnet_50(nn.Module):
+class ResNet50(nn.Module):
     def __init__(self, feature_layer='layer3', pretrained=False):
         super().__init__()
         self.model = resnet50(pretrained=pretrained)

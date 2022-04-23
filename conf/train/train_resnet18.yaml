@@ -1,0 +1,18 @@
+network:
+  arch: resnet18
+  ckpt_path:
+  trained_model_path: pretrained/alexnet/pretrained_resnet18_e50.pth
+hparams:
+  epoch_num: 50
+  batch_size: 8
+  initial_lr: 1e-2
+  ultimate_lr: 1e-5
+  momentum: 0.9
+  weight_decay: 5e-4
+data:
+  name: got10k
+  root_dir: data/GOT-10k
+logging:
+  logger: tensorboard
+  log_dir: logs
+  checkpoints: val, latest
