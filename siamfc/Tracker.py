@@ -3,6 +3,7 @@ https://github.com/got-10k/toolkit/blob/master/got10k/trackers/__init__.py."""
 import torch
 import cv2 as cv
 import numpy as np
+from time import time
 from siamfc.utils  import crop_and_resize, read_image, show_image
 from collections import namedtuple
 
@@ -75,33 +76,47 @@ class SiamFCTracker:
 
         t : ndarray of shape (frames,)
             Time stamps
-        """
+        """        
         # Initialize tracking parameters
         n_frames = len(img_files)
+        t = np.zeros((n_frames,))
+        boxes = np.zeros((n_frames, 4))
+        boxes[0, :] = box
         img = read_image(img_files[0])
-        self.init(img, box, box_style)
+        
+        t0 = time()
+        self.init(img, boxes[0], box_style)
+        t[0] = time() - t0
+        
+        # Visualize initial bounding box
         if visualize:
             self.display(
                 img, 
-                box, 
+                boxes[0], 
                 window_title=f"{video_name} Frame {1}/{n_frames}"
             )
 
         # Update tracker for each frame
         for frame, img_file in enumerate(img_files[1:]):
             img = read_image(img_file)
-            box, score_map, search_img = self.update(img)
+            
+            t0 = time()
+            boxes[frame], score_map, search_img = self.update(img)
+            t[frame] = time() - t0
+            
+            # Visualize updated bounding box
             if visualize:
                 self.display(
                     img,
-                    box,
+                    boxes[frame, :],
                     score_map=score_map,
                     search_img=search_img,
                     window_title=f"{video_name} Frame {frame+2}/{n_frames}"
                 )
 
         cv.destroyAllWindows()
-    
+        return boxes, t
+
     @torch.no_grad()
     def init(self, img, box, box_style='ltwh') -> None:
         """Initialize tracker parameters. Pre-calculates kernel (exemplar image embedding).
@@ -220,7 +235,7 @@ class SiamFCTracker:
         scale = (1 - self.cfg.scale_lr) * 1.0 + \
             self.cfg.scale_lr * self.scale_factors[score_idx]
             
-        self.box_sz *= scale    # bounding bbox
+        self.box_sz *= scale    # bounding box
         self.z_sz *= scale      # exemplar image
         self.x_sz *= scale      # search image
         
