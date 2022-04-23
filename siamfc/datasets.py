@@ -1,4 +1,5 @@
 """DataModule class for GOT-10k dataset."""
+from ast import Num
 import cv2 as cv
 import numpy as np
 import pytorch_lightning as pl
@@ -38,7 +39,8 @@ class GOT10kDataModule(pl.LightningDataModule):
             self.got10k_train, 
             batch_size=self.batch_size, 
             shuffle=True,
-            drop_last=True
+            drop_last=True,
+            num_workers=12
         )
         return got10k_train
     
@@ -48,7 +50,8 @@ class GOT10kDataModule(pl.LightningDataModule):
             self.got10k_val, 
             batch_size=self.batch_size,
             shuffle=False,
-            drop_last=True
+            drop_last=True,
+            num_workers=12
         )
         return got10k_val
     
@@ -58,7 +61,8 @@ class GOT10kDataModule(pl.LightningDataModule):
             self.got10k_test, 
             batch_size=self.batch_size,
             shuffle=False,
-            drop_last=True
+            drop_last=True,
+            num_workers=12
         )
         return got10k_test
         
