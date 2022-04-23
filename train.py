@@ -11,10 +11,13 @@ def main(cfg):
     # Initialize encoder
     if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
+        preprocess = False
     elif cfg.network.arch == 'resnet18':
         encoder = ResNet18()
+        preprocess = True
     elif cfg.network.arch == "resnet50":
         encoder = ResNet50()
+        preprocess = True
 
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
@@ -26,7 +29,8 @@ def main(cfg):
         momentum=cfg.hparams.momentum,
         weight_decay=cfg.hparams.weight_decay,
         loss=bce_loss_balanced,
-        init_weights=True
+        init_weights=True,
+        preprocess=preprocess
     )
 
     # Initialize GOT-10k datamodule
