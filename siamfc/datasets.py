@@ -1,5 +1,4 @@
 """DataModule class for GOT-10k dataset."""
-from ast import Num
 import cv2 as cv
 import numpy as np
 import pytorch_lightning as pl

@@ -12,7 +12,7 @@ from .metrics import calc_center_error
 
 class SiamFCNet(pl.LightningModule):
     def __init__(
-        self, 
+        self,
         encoder,
         loss,
         epoch_num=50,

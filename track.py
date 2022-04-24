@@ -17,7 +17,7 @@ def main(cfg):
     # Load pretrained encoder
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     encoder, preprocess = load_pretrained_encoder(
-        cfg.network.arch, 
+        cfg.network.arch,
         cfg.network.pretrained,
         device
     )
@@ -33,20 +33,21 @@ def main(cfg):
         preprocess=preprocess,
         init_weights=False
     )
+    siamese_net.eval()
 
     # Initialize tracker
     tracker = SiamFCTracker(
         siamese_net=siamese_net,
         **cfg.tracker
     )
-    
+
     # Get data (images and annotations)
     img_files = sorted(glob.glob(cfg.data_dir + '*.jpg'))
     anno = np.loadtxt(cfg.data_dir + 'groundtruth.txt', delimiter=',').reshape(-1, 4)
-     
+
     # Run tracker 
     tracker.track(img_files, anno[0], visualize=True)
-    
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

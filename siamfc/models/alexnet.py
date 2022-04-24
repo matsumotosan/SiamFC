@@ -72,7 +72,7 @@ class AlexNet(nn.Module):
 
 
 class AlexNet_torch(nn.Module):
-    def __init__(self, pretrained=False):
+    def __init__(self, pretrained=True):
         super().__init__()
         self.model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=pretrained)
         self.total_stride = 8
