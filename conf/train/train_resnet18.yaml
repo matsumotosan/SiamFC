@@ -1,7 +1,7 @@
 network:
   arch: resnet18
   ckpt_path:
-  trained_model_path: pretrained/alexnet/pretrained_resnet18_e50.pth
+  trained_model_path: pretrained/resnet18/siamfc_resnet18.pth
 hparams:
   # epoch_num: 50
   min_epochs: 10

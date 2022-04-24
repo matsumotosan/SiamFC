@@ -13,10 +13,10 @@ def main(cfg):
         encoder = AlexNet()
         preprocess = False
     elif cfg.network.arch == 'resnet18':
-        encoder = ResNet18()
+        encoder = ResNet18(pretrained=False)
         preprocess = False
     elif cfg.network.arch == "resnet50":
-        encoder = ResNet50()
+        encoder = ResNet50(pretrained=False)
         preprocess = False
 
     # Initialize SiamFC network
