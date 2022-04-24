@@ -1,7 +1,7 @@
 # Default configurations
 network:
   arch: alexnet
-  pretrained: pretrained/alexnet/pretrained_alexnet_e50.pth
+  pretrained: pretrained/alexnet/siamfc_alexnet_e50.pth
 hparams:
   batch_size: 8
   epoch_num: 50

@@ -13,6 +13,7 @@ from siamfc.transforms import (
     SiamFCTransforms,
     ToTensor
 )
+from siamfc.utils import load_pretrained_encoder
 
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "Compose",
     "GOT10kDataModule",
     "ImageNetDataModule",
+    "load_pretrained_encoder",
     "Pair",
     "RandomCrop",
     "RandomStretch",

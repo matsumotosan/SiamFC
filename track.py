@@ -12,36 +12,6 @@ from siamfc.models import *
 # Test 101: partial occlusion
 # Test 150: four skaters, frequently switches between skaters due to similar appearance
 
-def load_pretrained_encoder(arch, pretrained, device):
-    if arch == 'alexnet':
-        encoder = AlexNet()
-        state_dict = torch.load(pretrained, map_location=device)
-        encoder.load_state_dict(state_dict)
-        preprocess = False
-    elif arch == 'resnet18':
-        encoder = ResNet18()
-        state_dict = torch.load(pretrained, map_location=device)
-        encoder.load_state_dict(state_dict)
-        preprocess = False
-    # elif arch == 'crw_resnet18':
-    #     encoder = resnet_18(pretrained=False)
-    #     state_dict = torch.load(pretrained, map_location=device)
-    #     new_state_dict = OrderedDict() 
-    #     for (k, v) in state_dict['model'].items():
-    #         if k in ['selfsim_fc.0.weight', 'selfsim_fc.0.bias']:
-    #             continue
-    #         new_k = k[8:]
-    #         new_state_dict[new_k] = v
-    #     encoder.load_state_dict(new_state_dict)
-    #     preprocess = True
-    # elif arch == 'resnet50':
-    #     encoder = resnet_50(pretrained=True)
-    #     preprocess = True
-    else:
-        raise ValueError('Invalid network architecture specified.')
-    
-    return encoder, preprocess
-
 
 def main(cfg):
     # Load pretrained encoder

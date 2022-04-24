@@ -1,6 +1,6 @@
 network:
   arch: resnet18
-  pretrained: pretrained/resnet18/pretrained_resnet18_e50.pth
+  pretrained: third-party/siamfc_alexnet_e50.pth
 hparams:
   batch_size: 8
   epoch_num: 50
