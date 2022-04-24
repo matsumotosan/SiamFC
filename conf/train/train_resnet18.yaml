@@ -3,7 +3,9 @@ network:
   ckpt_path:
   trained_model_path: pretrained/alexnet/pretrained_resnet18_e50.pth
 hparams:
-  epoch_num: 50
+  # epoch_num: 50
+  min_epochs: 10
+  max_epochs: 50
   batch_size: 8
   initial_lr: 1e-2
   ultimate_lr: 1e-5

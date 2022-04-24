@@ -11,22 +11,27 @@ def main(cfg):
     # Initialize encoder
     if cfg.network.arch == 'alexnet':
         encoder = AlexNet()
+        preprocess = False
     elif cfg.network.arch == 'resnet18':
         encoder = ResNet18()
+        preprocess = False
     elif cfg.network.arch == "resnet50":
         encoder = ResNet50()
+        preprocess = False
 
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
         encoder=encoder,
-        epoch_num=cfg.hparams.epoch_num,
+        # epoch_num=cfg.hparams.epoch_num,
+        epoch_num=cfg.hparams.max_epochs,
         batch_size=cfg.hparams.batch_size,
         initial_lr=cfg.hparams.initial_lr,
         ultimate_lr=cfg.hparams.ultimate_lr,
         momentum=cfg.hparams.momentum,
         weight_decay=cfg.hparams.weight_decay,
         loss=bce_loss_balanced,
-        init_weights=True
+        init_weights=True,
+        preprocess=preprocess
     )
 
     # Initialize GOT-10k datamodule
@@ -50,8 +55,8 @@ def main(cfg):
 
     # Initialize trainer
     trainer = pl.Trainer(
-        min_epochs=cfg.hparams.epoch_num,
-        max_epochs=cfg.hparams.epoch_num,
+        min_epochs=cfg.hparams.min_epochs,
+        max_epochs=cfg.hparams.max_epochs,
         callbacks=checkpoints,
         accelerator="auto",
         devices="auto",
@@ -85,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         dest="config_file", 
-        default="./conf/train/train_alexnet.yaml",
+        default="./conf/train/train_resnet18.yaml",
         help="Path to training config file."
     )
 

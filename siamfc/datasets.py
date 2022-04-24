@@ -21,7 +21,7 @@ class GOT10kDataModule(pl.LightningDataModule):
         """Download and prepare data."""
         pass
     
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self,  stage: Optional[str] = None) -> None:
         """Define transforms and data splits."""
         if stage == "fit" or stage is None:
             train_seqs = GOT10k(root_dir=self.data_dir, subset='train')

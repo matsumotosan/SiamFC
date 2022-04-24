@@ -54,8 +54,8 @@ class SiamFCNet(pl.LightningModule):
         self.preprocess = preprocess
         self.normalize = torch.nn.Sequential(
             transforms.Normalize(
-                [0.485, 0.456, 0.406],
-                [0.229, 0.224, 0.225])
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225])
             )
         self.encoder = encoder
         self.batch_size = batch_size
