@@ -72,22 +72,30 @@ class AlexNet(nn.Module):
 
 
 class AlexNet_torch(nn.Module):
-    def __init__(self,pretrained=False):
-        super(AlexNet_torch,self).__init__()
+    def __init__(self, pretrained=False):
+        super().__init__()
         self.model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=pretrained)
         self.total_stride = 8
+
+    def modify(self, padding=''):
+        """Modify PyTorch AlexNet architecture to contain only feature embedding portion.
+        """
+        self.model = nn.Sequential(*[self.model.features[i] for i in range(11)])
+        self.model[0].stride = tuple(2 for _ in self.model[0].stride)
+        
+        # # Remove average pooling and classifier layers
+        # remove_layers = ['avgpool', 'classifier']
+        # for layer in remove_layers:
+        #     setattr(self.model, layer, None)
             
-    def modify(self,padding=''):
-        #remove the average pooling layer and the classifier
-        remove_layers = ['avgpool','classifier']
-        for layer in remove_layers:
-            setattr(self.model,layer,None)
-        #remove the last relu activation and pooling layer 
-        self.model.features[12] = None
-        self.model.features[11] = None
-        #set the stride of the first conv layer to be 2
-        self.model.features[0].stride = tuple(2 for _ in self.model.features[0].stride)
-        #modify the padding if specified
+        # # Remove last ReLU and MaxPool2d layer 
+        # self.model.features[12] = None  # last ReLU
+        # self.model.features[11] = None  # last MaxPool2d
+
+        # # Set first conv layer stride to 2
+        # self.model.features[0].stride = tuple(2 for _ in self.model.features[0].stride)
+        
+        # Modify the padding if specified
         if padding != '' and padding != 'no':
             for m in self.model.modules():
                 if isinstance(m, torch.nn.Conv2d) and sum(m.padding) > 0:
@@ -95,9 +103,10 @@ class AlexNet_torch(nn.Module):
         elif padding == 'no':
             for m in self.model.modules():
                 if isinstance(m, torch.nn.Conv2d) and sum(m.padding) > 0:
-                    m.padding = (0,0)
-        
+                    m.padding = (0, 0)
+
     def forward(self, x):
-        for i in range(11):
-            x = self.model.features[i](x)
+        # for i in range(11):
+        #     x = self.model.features[i](x)
+        x = self.model(x)
         return x

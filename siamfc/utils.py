@@ -13,6 +13,10 @@ def load_pretrained_encoder(arch, pretrained, device):
         state_dict = torch.load(pretrained, map_location=device)
         encoder.load_state_dict(state_dict)
         preprocess = False
+    elif arch == 'alexnet-torch':
+        encoder = AlexNet_torch()
+        encoder.modify()
+        preprocess = True
     elif arch == 'resnet18':
         encoder = ResNet18()
         state_dict = torch.load(pretrained, map_location=device)
@@ -36,6 +40,7 @@ def load_pretrained_encoder(arch, pretrained, device):
         raise ValueError('Invalid network architecture specified.')
     
     return encoder, preprocess
+
 
 def create_labels(size, k, r_pos, r_neg=0, metric='l1'):
     """Create ground truth score map.
