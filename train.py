@@ -3,6 +3,7 @@ import argparse
 import torch
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
+import siamfc
 from siamfc import *
 from siamfc.models import *
 
@@ -13,7 +14,9 @@ def main(cfg):
         encoder = AlexNet()
         preprocess = False
     elif cfg.network.arch == 'resnet18':
-        encoder = ResNet18(pretrained=False)
+        encoder = siamfc.models.resnet18(pretrained=False)
+        encoder.modify(remove_layers=['layer4'])
+        encoder.total_stride = 8
         preprocess = False
     elif cfg.network.arch == "resnet50":
         encoder = ResNet50(pretrained=False)

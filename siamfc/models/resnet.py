@@ -68,9 +68,9 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
         model.load_state_dict(state_dict)
     return model
 
-def resnet18(pretrained=False, progress=True, **kwargs):
-    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
-                   **kwargs)
+# def resnet18(pretrained=False, progress=True, **kwargs):
+#     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
+#                    **kwargs)
 
 def resnet50(pretrained=False, progress=True, **kwargs) -> ResNet:
     return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
