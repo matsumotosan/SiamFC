@@ -22,6 +22,9 @@ def load_pretrained_encoder(arch, pretrained, device):
         state_dict = torch.load(pretrained, map_location=device)
         encoder.load_state_dict(state_dict)
         preprocess = False
+    elif arch == 'resnet18_ImageNet':
+        encoder = ResNet18(pretrained=True)
+        preprocess = True
     # elif arch == 'crw_resnet18':
     #     encoder = resnet_18(pretrained=False)
     #     state_dict = torch.load(pretrained, map_location=device)
