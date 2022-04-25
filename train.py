@@ -25,7 +25,6 @@ def main(cfg):
     # Initialize SiamFC network
     siamfc_model = SiamFCNet(
         encoder=encoder,
-        # epoch_num=cfg.hparams.epoch_num,
         epoch_num=cfg.hparams.max_epochs,
         batch_size=cfg.hparams.batch_size,
         initial_lr=cfg.hparams.initial_lr,
@@ -73,12 +72,6 @@ def main(cfg):
         ckpt_path=cfg.network.ckpt_path
     )
 
-    # # Test model
-    # trainer.test(
-    #     model=siamfc_model,
-    #     datamodule=got10k_dm
-    # )
-    
     # Save encoder weights
     torch.save(
         siamfc_model.encoder.state_dict(),
@@ -93,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         dest="config_file", 
-        default="./conf/train/train_resnet18.yaml",
+        default="./conf/train/train_alexnet.yaml",
         help="Path to training config file."
     )
 
