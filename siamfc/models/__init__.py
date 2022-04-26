@@ -6,5 +6,6 @@ __all__ = [
     "AlexNet_torch",
     "ResNet",
     "ResNet18",
-    "ResNet50"
+    "ResNet50",
+    "resnet18"
 ]

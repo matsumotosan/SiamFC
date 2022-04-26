@@ -21,7 +21,6 @@ def main(cfg):
     elif cfg.network.arch == "resnet50":
         encoder = ResNet50(pretrained=False)
         preprocess = False
-    
     elif cfg.network.arch == 'resnetDW':
         encoder = ResNet22()
         preprocess = False
@@ -97,6 +96,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         dest="config_file", 
+        # default="./conf/train/train_resnetDW.yaml",
         default="./conf/train/train_resnetDW.yaml",
         help="Path to training config file."
     )

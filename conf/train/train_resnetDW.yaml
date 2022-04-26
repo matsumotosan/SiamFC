@@ -1,9 +1,8 @@
 network:
   arch: resnetDW
   ckpt_path:
-  trained_model_path: pretrained/resnet18/siamfc_resnetDW.pth
+  trained_model_path: pretrained/resnetDW/siamfc_resnetDW.pth
 hparams:
-  # epoch_num: 50
   min_epochs: 10
   max_epochs: 50
   batch_size: 8
@@ -13,9 +12,7 @@ hparams:
   weight_decay: 1e-4
 data:
   name: got10k
-  #root_dir: data/GOT-10k
-root_dir : C:/Users/xw/Desktop/tracking restart/siamfc-pytorch/data/GOT-10k
-
+  root_dir: data/GOT-10k
 logging:
   logger: tensorboard
   log_dir: logs
