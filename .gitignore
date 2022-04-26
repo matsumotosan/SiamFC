@@ -133,3 +133,5 @@ data/
 outputs/
 .vscode/
 logs/
+results/
+reports/

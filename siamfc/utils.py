@@ -1,16 +1,34 @@
 import torch
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
 from siamfc.models import *
+
+
+def partial_load(pretrained_dict, model, skip_keys=[], log=False):
+    model_dict = model.state_dict()
+    
+    # 1. filter out unnecessary keys
+    filtered_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict and not any([sk in k for sk in skip_keys])}
+    skipped_keys = [k for k in pretrained_dict if k not in filtered_dict]
+    unload_keys = [k for k in model_dict if k not in pretrained_dict]
+    
+    # 2. overwrite entries in the existing state dict
+    model_dict.update(filtered_dict)
+
+    # 3. load the new state dict
+    model.load_state_dict(model_dict)
+
+    if log:
+        print('\nSkipped keys: ', skipped_keys)
+        print('\nLoading keys: ', filtered_dict.keys())
+        print('\nUnLoaded keys: ', unload_keys)
 
 
 def load_pretrained_encoder(arch, pretrained, device):
     if arch == 'alexnet':
         encoder = AlexNet()
-        state_dict = torch.load(pretrained, map_location=device)
+        state_dict = torch.load(pretrained, device=device)
         encoder.load_state_dict(state_dict)
         preprocess = False
     elif arch == 'alexnet-torch':
@@ -22,23 +40,28 @@ def load_pretrained_encoder(arch, pretrained, device):
         state_dict = torch.load(pretrained, map_location=device)
         encoder.load_state_dict(state_dict)
         preprocess = False
-    # elif arch == 'crw_resnet18':
-    #     encoder = resnet_18(pretrained=False)
-    #     state_dict = torch.load(pretrained, map_location=device)
-    #     new_state_dict = OrderedDict() 
-    #     for (k, v) in state_dict['model'].items():
-    #         if k in ['selfsim_fc.0.weight', 'selfsim_fc.0.bias']:
-    #             continue
-    #         new_k = k[8:]
-    #         new_state_dict[new_k] = v
-    #     encoder.load_state_dict(new_state_dict)
-    #     preprocess = True
-    # elif arch == 'resnet50':
-    #     encoder = resnet_50(pretrained=True)
-    #     preprocess = True
+    elif arch == 'resnet18-crw':
+        encoder = resnet18()
+        state_dict = torch.load(pretrained, map_location=device)
+        new_state_dict = {}
+        for k, v in state_dict['model'].items():
+            if 'conv1.1.weight' in k or 'conv2.1.weight' in k:
+                new_state_dict[k.replace('.1.weight', '.weight')] = v
+            if 'encoder.model' in k:
+                new_state_dict[k.replace('encoder.model.', '')] = v
+            else:
+                new_state_dict[k] = v
+
+        partial_load(new_state_dict, encoder, skip_keys=['head',])
+        # encoder.load_state_dict(new_state_dict)
+        encoder.modify(remove_layers=['layer4'])
+        encoder.total_stride = 8
+        preprocess = False
+    elif arch == 'resnet18_ImageNet':
+        encoder = ResNet18(pretrained=True)
+        preprocess = True
     else:
-        raise ValueError('Invalid network architecture specified.')
-    
+        raise ValueError('Invalid architecture.')
     return encoder, preprocess
 
 
