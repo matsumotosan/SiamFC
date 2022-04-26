@@ -52,11 +52,19 @@ class SiamFCNet(pl.LightningModule):
         """
         super().__init__()
         self.preprocess = preprocess
+        # # AlexNet (pretrained on ImageNet)
+        # self.normalize = torch.nn.Sequential(
+        #     transforms.Normalize(
+        #         mean=[0.485, 0.456, 0.406],
+        #         std=[0.229, 0.224, 0.225])
+        #     )
+        # CRW-ResNet
         self.normalize = torch.nn.Sequential(
             transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225])
+                mean=[0.4914, 0.4822, 0.4465],
+                std=[0.2023, 0.1994, 0.2010]
             )
+        )
         self.encoder = encoder
         self.batch_size = batch_size
         self.initial_lr = initial_lr

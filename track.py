@@ -56,7 +56,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--config",
         dest="config_file", 
-        default="./conf/track/track_alexnet.yaml",
+        default="./conf/track/track_resnet18-crw.yaml",
         help="Path to tracking config file."
     )
     

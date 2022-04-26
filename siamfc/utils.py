@@ -55,7 +55,7 @@ def load_pretrained_encoder(arch, pretrained, device):
         partial_load(new_state_dict, encoder, skip_keys=['head',])
         encoder.modify(remove_layers=['layer4'])
         encoder.total_stride = 8
-        preprocess = False
+        preprocess = True
     elif arch == 'resnet18_ImageNet':
         encoder = ResNet18(pretrained=True)
         preprocess = True

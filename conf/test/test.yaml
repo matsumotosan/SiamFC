@@ -1,7 +1,7 @@
 network:
-  name: alexnet-filter
-  arch: alexnet
-  pretrained: pretrained/alexnet/siamfc_alexnet_e50_add_filter.pth
+  name: resnet18-crw
+  arch: resnet18-crw
+  pretrained: pretrained/crw-resnet/crw.pth
 hparams:
   batch_size: 8
   epoch_num: 50
