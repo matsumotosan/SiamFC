@@ -34,8 +34,11 @@ def bce_loss_balanced(scores, labels):
     weight /= weight.sum()
     
     # Calculate BCE loss
-    loss = F.binary_cross_entropy_with_logits(scores, labels, weight, reduction='mean')
-    
+    loss = F.binary_cross_entropy_with_logits(
+        scores,
+        labels,
+        weight,
+        reduction='sum')
     return loss
 
 def triplet_loss(scores, labels):

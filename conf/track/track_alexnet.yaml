@@ -1,6 +1,6 @@
 network:
   arch: alexnet
-  pretrained: pretrained/alexnet/siamfc_alexnet_e50.pth
+  pretrained: pretrained/alexnet/siamfc_alexnet_e50_add_filter.pth
 hparams:
   batch_size: 8
   epoch_num: 50

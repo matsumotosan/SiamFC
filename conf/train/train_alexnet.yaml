@@ -2,9 +2,10 @@ network:
   arch: alexnet
   ckpt_path:
   # ckpt_path: logs/alexnet/version_0/checkpoints/epoch=49-step=58300-val_losss=0.0.ckpt
-  trained_model_path: pretrained/alexnet/pretrained_alexnet_e50_trial.pth
+  trained_model_path: pretrained/alexnet/siamfc_alexnet_e50_add_filter.pth
 hparams:
-  epoch_num: 50
+  min_epochs: 10
+  max_epochs: 50
   batch_size: 8
   initial_lr: 1e-2
   ultimate_lr: 1e-5

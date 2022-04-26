@@ -64,44 +64,10 @@ class GOT10kDataModule(pl.LightningDataModule):
             num_workers=12
         )
         return got10k_test
-        
-
-class ImageNetDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str, transform, batch_size: int = 32) -> None:
-        super().__init__()
-        self.data_dir = data_dir
-        self.transform = transform
-        self.batch_size = batch_size
-        
-        self.train_ds: Optional[Dataset] = None
-        self.val_ds: Optional[Dataset] = None
-        self.test_ds: Optional[Dataset] = None
-
-    def prepare_data(self, stage: Optional[str] = None) -> None:
-        """Download and preprocess data."""
-        pass
-    
-    def setup(self, stage: Optional[str] = None) -> None:
-        """Setup dataloader and transforms."""
-        self.train_ds = None
-        self.val_ds = None
-        self.test_ds = None
-    
-    def train_dataloader(self) -> DataLoader:
-        """Return dataloader for training."""
-        return DataLoader(self.train_ds, batch_size=self.batch_size)
-
-    def val_dataloader(self) -> DataLoader:
-        """Return dataloader for validation."""
-        return DataLoader(self.val_ds, batch_size=self.batch_size)
-
-    def test_dataloader(self) -> DataLoader:
-        """Return dataloader for testing."""
-        return DataLoader(self.test_ds, batch_size=self.batch_size)
 
 
 class Pair(Dataset):
-    def __init__(self, seqs, transforms=None, max_frames_sep=50, pairs_per_seq=1):
+    def __init__(self, seqs, transforms=None, max_frames_sep=100, pairs_per_seq=1):
         """Data class for generating exemplar and target images from sequences of video frames.
         
         Parameters
@@ -123,38 +89,87 @@ class Pair(Dataset):
         self.transforms = transforms
         self.max_frames_sep = max_frames_sep
         self.pairs_per_seq = pairs_per_seq
-        indices = np.random.permutation(len(seqs))
-        self.indices = indices[indices != 331] # We need to avoid the 332th video sequence because it's corrupted
+        self.indices = np.random.permutation(len(seqs))
         self.return_meta = getattr(seqs, 'return_meta', False)
-    
+
     def __getitem__(self, index):
-        # Get image filenames and annotations for video
         index = self.indices[index % len(self.indices)]
-        img_files, anno  = self.seqs[index]
-        frame_indices = list(range(len(img_files)))
 
-        # Select frame indices (within maximum number of frames)
-        z_idx, x_idx = self.pick_two(frame_indices)
-        while x_idx - z_idx > self.max_frames_sep:
-            z_idx, x_idx = self.pick_two(frame_indices)
-
-        # Read exemplar and target images
-        z = cv.imread(img_files[z_idx], cv.IMREAD_COLOR)
-        x = cv.imread(img_files[x_idx], cv.IMREAD_COLOR)
+        # get filename lists and annotations
+        if self.return_meta:
+            img_files, anno, meta = self.seqs[index]
+            vis_ratios = meta.get('cover', None)
+        else:
+            img_files, anno = self.seqs[index][:2]
+            vis_ratios = None
         
-        # Get annotations for exemplar and target images
-        box_z = anno[z_idx]
-        box_x = anno[x_idx]
+        # filter out noisy frames
+        val_indices = self._filter(
+            cv.imread(img_files[0], cv.IMREAD_COLOR),
+            anno, vis_ratios)
+        if len(val_indices) < 2:
+            index = np.random.choice(len(self))
+            return self.__getitem__(index)
 
-        # Perform image transforms on exemplar and target images
+        # sample a frame pair
+        rand_z, rand_x = self._sample_pair(val_indices)
+
+        z = cv.imread(img_files[rand_z], cv.IMREAD_COLOR)
+        x = cv.imread(img_files[rand_x], cv.IMREAD_COLOR)
+        z = cv.cvtColor(z, cv.COLOR_BGR2RGB)
+        x = cv.cvtColor(x, cv.COLOR_BGR2RGB)
+        
+        box_z = anno[rand_z]
+        box_x = anno[rand_x]
+
+        item = (z, x, box_z, box_x)
         if self.transforms is not None:
-            z, x = self.transforms(z, x, box_z, box_x)
-
-        return z, x
-
+            item = self.transforms(*item)
+        
+        return item
+    
     def __len__(self):
-        return len(self.indices) *  self.pairs_per_seq
+        return len(self.indices) * self.pairs_per_seq
+    
+    def _sample_pair(self, indices):
+        n = len(indices)
+        assert n > 0
 
-    @staticmethod
-    def pick_two(indices):
-        return np.sort(np.random.choice(indices, 2, replace=False))
+        if n == 1:
+            return indices[0], indices[0]
+        elif n == 2:
+            return indices[0], indices[1]
+        else:
+            for i in range(100):
+                rand_z, rand_x = np.sort(
+                    np.random.choice(indices, 2, replace=False))
+                if rand_x - rand_z < 100:
+                    break
+            else:
+                rand_z = np.random.choice(indices)
+                rand_x = rand_z
+
+            return rand_z, rand_x
+    
+    def _filter(self, img0, anno, vis_ratios=None):
+        size = np.array(img0.shape[1::-1])[np.newaxis, :]
+        areas = anno[:, 2] * anno[:, 3]
+
+        # acceptance conditions
+        c1 = areas >= 20
+        c2 = np.all(anno[:, 2:] >= 20, axis=1)
+        c3 = np.all(anno[:, 2:] <= 500, axis=1)
+        c4 = np.all((anno[:, 2:] / size) >= 0.01, axis=1)
+        c5 = np.all((anno[:, 2:] / size) <= 0.5, axis=1)
+        c6 = (anno[:, 2] / np.maximum(1, anno[:, 3])) >= 0.25
+        c7 = (anno[:, 2] / np.maximum(1, anno[:, 3])) <= 4
+        if vis_ratios is not None:
+            c8 = (vis_ratios > max(1, vis_ratios.max() * 0.3))
+        else:
+            c8 = np.ones_like(c1)
+        
+        mask = np.logical_and.reduce(
+            (c1, c2, c3, c4, c5, c6, c7, c8))
+        val_indices = np.where(mask)[0]
+
+        return val_indices
