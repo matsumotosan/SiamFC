@@ -38,7 +38,7 @@ def bce_loss_balanced(scores, labels):
         scores,
         labels,
         weight,
-        reduction='mean')
+        reduction='sum')
     return loss
 
 def triplet_loss(scores, labels):
