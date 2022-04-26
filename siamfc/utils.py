@@ -53,7 +53,6 @@ def load_pretrained_encoder(arch, pretrained, device):
                 new_state_dict[k] = v
 
         partial_load(new_state_dict, encoder, skip_keys=['head',])
-        # encoder.load_state_dict(new_state_dict)
         encoder.modify(remove_layers=['layer4'])
         encoder.total_stride = 8
         preprocess = False
